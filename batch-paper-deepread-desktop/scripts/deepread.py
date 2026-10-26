@@ -33,7 +33,7 @@ ROUND_TITLES = {
     6: "Review unresolved evidence and conflicting claims",
     7: "Scientific understanding and reproducibility planning (design only)",
 }
-EVIDENCE_EXAMPLE = '{"page": 3, "quote": "A contiguous 6-260 character quotation from this source page"}'
+EVIDENCE_EXAMPLE = '{"page": 3, "quote": "A contiguous 6-260 character quotation from this source page"}' 
 
 
 def ts() -> str:
@@ -334,7 +334,7 @@ def group_defs(ctx: dict) -> list[tuple[str, list[str]]]:
 
 
 def obs_spec() -> str:
-    return ('Each observations/key_points entry must contain '
+    return ('Each observations/key_points entry must contain ' 
             '{"claim":"...","category":"method/experiment/assumption/limitation/desk_scenario/...",'
             '"status":"reported|inferred","confidence":"high|medium|low",'
             '"evidence":[{"page":1,"quote":"contiguous original page quotation, 6-260 characters"}]}. '
