@@ -1,6 +1,6 @@
 # search2discovery v1.0.0 — Release readiness audit
 
-**Status: source package assembled and offline-tested; requires maintainer approval before public publishing.**
+**Status: public GitHub repository published under MIT at the maintainer explicit request. Historical-source ownership and redistribution rights remain maintainer assertions and were not independently verified.**
 
 ## Basis
 
@@ -35,7 +35,7 @@ Reviewed the actual `Research_Cognition_Engine_v6.6_English_Internal_R3_PaperOnl
 
 ## Important limitations / manual release blockers
 
-1. **License and ownership — MUST REVIEW:** The included MIT `LICENSE` is a proposed public-release choice. The maintainer must confirm ownership, redistribution rights and copyright notice accuracy for all version-derived/adapted source files. OpenAI-generated text, upstream inspirations, and any external contributions require rights review before public release. Optional PyMuPDF is AGPL-3.0/commercial.
+1. **License and ownership — MAINTAINER ASSERTION:** The maintainer explicitly requested publication under MIT. This agent did not independently verify ownership, redistribution rights or copyright accuracy for version-derived/adapted source files. OpenAI-generated text, upstream inspirations, and external contributions still warrant rights review. Optional PyMuPDF is AGPL-3.0/commercial.
 2. **Genuine Codex Desktop model tests — NOT RUN:** Native model aliases, separate reviewer-thread identity and model availability cannot be verified by offline Python tests. The maintainer should perform a small real desktop smoke test with only public-domain or appropriately licensed paper content.
 3. **Actual scholarly novelty and quality — NOT PROVEN:** Matching page quotes does not validate formulas, figures, metric tables or interpretation. Two independent reviewers cannot prove exhaustive novelty. Final human scientific review is required.
 4. **No runtime OS-level experiment sandbox — UNVERIFIED:** Skill policy prohibits experiment execution, but Codex tool permissions must also be configured to prevent accidental code or experiment runs. Only legal OA PDF downloads are permitted.
@@ -44,4 +44,4 @@ Reviewed the actual `Research_Cognition_Engine_v6.6_English_Internal_R3_PaperOnl
 7. **Generic rare-path diagnostic strings — IMPROVEMENT AREA:** Historical engines still contain some broad English exceptions. These do not remove source or audit gates but make user troubleshooting harder. Add specific exceptions in future releases with regression tests.
 8. **No end-to-end live science benchmark — NOT RUN:** The 238 tests are offline software tests. Real literature search quality, policy enforcement, and long-context cost require future controlled field evaluation.
 
-**Publication policy:** Publish only after the maintainer approves the repository target, source rights/licensing, clean `git status`, real Codex compatibility, and GitHub release/tag action. The archive does not publish anything by itself.
+**Publication record:** The maintainer requested a public GitHub repository under MIT; `https://github.com/boy-new-2019/search2discovery` was created and pushed on 2026-10-26. This record does not replace maintainer verification of third-party or historical-source rights.
