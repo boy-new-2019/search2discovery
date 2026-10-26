@@ -1,0 +1,3 @@
+# Evidence-grounded research cognition protocol
+
+Stages: MAP, MECHANISM, CONTRADICTION, HYPOTHESIS, NOVELTY (independent Sol and Astra), EXPERIMENT (paper-informed design only), FINAL (user approval pending). Use English for intermediate reasoning. Source-backed observations must link to a real accessible file and original page quote; verify hashes and cite provenance. Independent methodological reviewers must challenge assumptions and compare evaluation protocols; false consensus and score laundering are prohibited. Hypothesis novelty remains unproven after reviewer agreement; prior-art search can expose already-known mechanisms. Records in SQLite and source-verified round summaries survive restarts.

@@ -1,0 +1,3 @@
+# Structured native agent prompt policy
+
+All native tasks use explicit English stage requirements, a frozen macro goal, untrusted source excerpts, output JSON schema, page quotes, provenance and current phase obligations. Keep descriptions concise, avoid redundant restatement, and use existing committed evidence in preference to re-summarizing identical context. The main Codex Desktop controller cannot impersonate separate agents; if a native thread is unavailable, block rather than fabricate a review. The user-facing final presentation must be Chinese, after all intermediate English evidence and gate checks.

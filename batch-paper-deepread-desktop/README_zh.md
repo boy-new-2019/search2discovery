@@ -1,0 +1,3 @@
+# Batch Paper Deepread v4.4 | Windows Codex Desktop
+
+Two evidence-grounded screening passes, core selection and a minimum of five genuine original-text reading rounds. Native reviewers must use independent Codex Desktop threads; local Python creates tasks and checks outputs but does not call paid models by itself. Final method/evidence auditors retain veto rights. Economy, Balanced and Strict adjust reviewer redundancy, not the minimum number of reading rounds. R3 is literature-published experimental review and unexecuted desk reasoning only. All Skill instructions and internal reports are English; one final user-facing report is Chinese.

@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "purpose": "Synthetic offline priority-ranking canaries. Labels are fixtures, not validated scientific facts.",
+  "cases": [
+    {
+      "name": "Mechanism-without-terminology",
+      "k": 2,
+      "relevant": ["mechanism_revision", "partial_observation"],
+      "critical": ["mechanism_revision"],
+      "items": [
+        {"id": "keyword_only", "relevance": 1.0, "uncertainty": 0.1, "coverage": 0.0, "recency": 1.0, "cost": 0.1},
+        {"id": "mechanism_revision", "relevance": 0.48, "uncertainty": 1.0, "coverage": 1.0, "recency": 0.8, "cost": 0.5},
+        {"id": "partial_observation", "relevance": 0.55, "uncertainty": 0.8, "coverage": 0.95, "recency": 0.5, "cost": 0.6},
+        {"id": "irrelevant_similar_term", "relevance": 0.9, "uncertainty": 0.1, "coverage": 0.0, "recency": 0.9, "cost": 0.05}
+      ]
+    },
+    {
+      "name": "Protect-counterexample",
+      "k": 2,
+      "relevant": ["negative_evidence", "method_limit"],
+      "critical": ["negative_evidence"],
+      "items": [
+        {"id": "popular_positive", "relevance": 1.0, "uncertainty": 0.2, "coverage": 0.1, "recency": 1.0, "cost": 0.15},
+        {"id": "negative_evidence", "relevance": 0.4, "uncertainty": 1.0, "coverage": 1.0, "recency": 0.3, "cost": 0.5},
+        {"id": "method_limit", "relevance": 0.45, "uncertainty": 0.95, "coverage": 0.8, "recency": 0.1, "cost": 0.35}
+      ]
+    },
+    {
+      "name": "High-value-low-cost",
+      "k": 2,
+      "relevant": ["efficient_A", "efficient_B"],
+      "critical": ["efficient_A"],
+      "items": [
+        {"id": "expensive_fulltext", "relevance": 1.0, "uncertainty": 0.5, "coverage": 0.2, "recency": 1.0, "cost": 1.0},
+        {"id": "efficient_A", "relevance": 0.8, "uncertainty": 0.7, "coverage": 1.0, "recency": 0.8, "cost": 0.1},
+        {"id": "efficient_B", "relevance": 0.6, "uncertainty": 0.6, "coverage": 1.0, "recency": 0.5, "cost": 0.15}
+      ]
+    },
+    {
+      "name": "No-spurious-drift",
+      "k": 2,
+      "relevant": ["core_problem", "evidence_gap"],
+      "critical": ["core_problem"],
+      "items": [
+        {"id": "novel_but_unrelated", "relevance": 0.05, "uncertainty": 1.0, "coverage": 0.7, "recency": 1.0, "cost": 0.1},
+        {"id": "core_problem", "relevance": 1.0, "uncertainty": 0.8, "coverage": 0.7, "recency": 0.6, "cost": 0.3},
+        {"id": "evidence_gap", "relevance": 0.7, "uncertainty": 0.85, "coverage": 1.0, "recency": 0.4, "cost": 0.35}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,507 @@
+{
+  "schema_version": 2,
+  "main_direction": "Streaming 3D occupancy prediction, bird-eye-view scene representation, evidence-guided finite-capacity Gaussian memory, world models, temporal state revision and autonomous-driving decision planning.",
+  "core_keywords": [
+    "streaming occupancy",
+    "3d occupancy",
+    "occupancy prediction",
+    "gaussian occupancy",
+    "temporal occupancy",
+    "bev occupancy",
+    "evidence memory",
+    "streaming gaussian",
+    "occupancy world",
+    "world action model",
+    "memory augmented autonomous driving",
+    "driving task state",
+    "world model planning",
+    "end to end driving world model"
+  ],
+  "related_keywords": [
+    "autonomous driving",
+    "scene occupancy",
+    "bird eye view",
+    "bev",
+    "multi camera perception",
+    "sensor fusion",
+    "lidar vision",
+    "world model",
+    "motion forecasting",
+    "driving planning",
+    "end to end driving",
+    "trajectory prediction",
+    "temporal perception",
+    "state estimation",
+    "gaussian representation",
+    "3d reconstruction",
+    "vision language action"
+  ],
+  "quotas": {
+    "core": 50,
+    "related": 150,
+    "inspiration": 50
+  },
+  "category_disjoint": true,
+  "recent_years": 3,
+  "extension_years": 5,
+  "oldest_publication_year": 2006,
+  "as_of_date": null,
+  "min_title_length": 16,
+  "min_classification_score": {
+    "core": 3.2,
+    "related": 2.0,
+    "inspiration": 0.0
+  },
+  "top_venue_bonus": 8,
+  "preferred_domains": {
+    "nobel_economics": 1,
+    "philosophy": 1,
+    "sociology": 1,
+    "archaeology": 1,
+    "aesthetics": 1,
+    "cognitive_science": 1,
+    "ecology": 1,
+    "public_health": 1,
+    "physics": 1,
+    "chemistry": 1,
+    "geology": 1,
+    "mathematics": 1,
+    "urban_planning": 1,
+    "communication_studies": 1,
+    "culinary_science": 1
+  },
+  "queries": {
+    "core": [
+      "streaming 3D occupancy prediction temporal memory",
+      "gaussian occupancy autonomous driving temporal",
+      "streaming sparse gaussian occupancy representation",
+      "3D occupancy forecasting memory autonomous driving",
+      "temporal bird eye view occupancy camera perception",
+      "evidence conditioned streaming occupancy estimation",
+      "fixed capacity memory occupancy prediction"
+    ],
+    "related": [
+      "BEV perception multi camera autonomous driving",
+      "vision LiDAR fusion bird eye view driving",
+      "end to end autonomous driving world model",
+      "world action model planning autonomous driving",
+      "dynamic occupancy forecasting temporal vision",
+      "driving scene understanding planning perception",
+      "trajectory prediction memory world models",
+      "3D gaussian scene representation automotive",
+      "latent state estimation partial observation control",
+      "vision language action driving planning",
+      "self supervised world model autonomous navigation",
+      "sequential decision making memory constrained observation"
+    ],
+    "inspiration": {
+      "nobel_economics": [
+        "bounded rationality Herbert Simon decision costs original research",
+        "Elinor Ostrom collective action commons institutional economics"
+      ],
+      "behavioral_economics": [
+        "prospect theory risk perception reference dependent preferences",
+        "ambiguity aversion experimental economics decisions"
+      ],
+      "economic_history": [
+        "historical institutions path dependence economic development",
+        "technological diffusion industrial revolution economic history"
+      ],
+      "development_economics": [
+        "randomized field experiments development economics institutions",
+        "poverty traps microcredit social networks field experiment"
+      ],
+      "game_theory": [
+        "signaling games incomplete information equilibrium refinements",
+        "repeated games coordination cooperation and reputation"
+      ],
+      "market_design": [
+        "matching markets stable allocation incentive compatibility",
+        "auction mechanisms resource allocation mechanism design"
+      ],
+      "ecological_economics": [
+        "ecological economics planetary boundaries common pool governance",
+        "ecological economic systems resilience resource allocation"
+      ],
+      "philosophy": [
+        "philosophy of knowledge uncertainty evidence practical reason",
+        "conceptual analysis agency intentionality philosophy"
+      ],
+      "epistemology": [
+        "epistemology disagreement testimony belief justification",
+        "evidentialism underdetermination epistemic uncertainty"
+      ],
+      "ethics": [
+        "ethics moral uncertainty responsibility decision dilemmas",
+        "virtue ethics ethics of care practical reasoning"
+      ],
+      "logic": [
+        "nonmonotonic logic defeasible reasoning formal systems",
+        "paraconsistent logic inconsistent belief systems"
+      ],
+      "philosophy_of_mind": [
+        "philosophy of mind intentionality embodied cognition",
+        "consciousness attention mental representation philosophy"
+      ],
+      "philosophy_of_science": [
+        "scientific realism explanation model idealization philosophy",
+        "philosophy scientific models causal explanation underdetermination"
+      ],
+      "sociology": [
+        "social network diffusion social norms collective behavior",
+        "institutional trust cooperation sociology communities"
+      ],
+      "anthropology": [
+        "cultural anthropology ethnography collective knowledge",
+        "anthropological reciprocity kinship knowledge transmission"
+      ],
+      "political_science": [
+        "political science coalition formation voting collective decisions",
+        "institutional change comparative politics political behavior"
+      ],
+      "international_relations": [
+        "international relations security dilemma coordination institutions",
+        "diplomacy bargaining uncertainty international organizations"
+      ],
+      "criminology": [
+        "criminology environmental crime pattern routine activity theory",
+        "collective deterrence crime displacement social networks"
+      ],
+      "legal_theory": [
+        "legal reasoning precedent analogical interpretation",
+        "law uncertainty procedural justice institutional design"
+      ],
+      "social_psychology": [
+        "social psychology conformity group decision bias",
+        "social identity intergroup cooperation conflict psychology"
+      ],
+      "archaeology": [
+        "archaeology settlement networks material culture inference",
+        "archaeological chronology radiocarbon Bayesian interpretation"
+      ],
+      "history_of_science": [
+        "history of science discovery error correction paradigms",
+        "historical science laboratory practices instruments innovation"
+      ],
+      "linguistics": [
+        "historical linguistics sound change language evolution",
+        "pragmatics conversational implicature lexical ambiguity"
+      ],
+      "literary_studies": [
+        "narratology literary theory temporal narrative structures",
+        "literary criticism interpretation unreliable narrator"
+      ],
+      "religious_studies": [
+        "religious studies ritual collective memory social identity",
+        "comparative religion institutions belief transmission"
+      ],
+      "cultural_evolution": [
+        "cultural evolution cumulative knowledge social learning",
+        "cultural transmission innovation population dynamics"
+      ],
+      "historical_geography": [
+        "historical geography migration settlement change landscapes",
+        "historical cartography borders trade routes networks"
+      ],
+      "aesthetics": [
+        "aesthetic judgment philosophy beauty perception art",
+        "empirical aesthetics novelty complexity preference"
+      ],
+      "musicology": [
+        "music theory harmonic expectation rhythmic pattern perception",
+        "ethnomusicology musical transmission cultural traditions"
+      ],
+      "visual_arts": [
+        "art history visual composition iconography styles",
+        "visual arts composition balance Gestalt aesthetic patterns"
+      ],
+      "film_media_studies": [
+        "film studies montage temporal narrative editing",
+        "media studies attention framing visual storytelling"
+      ],
+      "architecture": [
+        "architectural morphology spatial organization built form",
+        "architecture wayfinding public space form function"
+      ],
+      "design_theory": [
+        "design studies analogical design creativity reframing",
+        "design methodology morphological analysis problem framing"
+      ],
+      "cognitive_science": [
+        "cognitive psychology memory interference retrieval dynamics",
+        "predictive processing cognition decision under uncertainty"
+      ],
+      "neuroscience": [
+        "neuroscience synaptic plasticity reconsolidation memory circuits",
+        "neuronal homeostasis predictive coding attention brain"
+      ],
+      "psychology": [
+        "psychology human judgment heuristics mental models",
+        "perception psychology attentional change blindness"
+      ],
+      "behavioral_ecology": [
+        "animal foraging exploration exploitation environmental uncertainty",
+        "behavioral ecology territory memory movement decisions"
+      ],
+      "education_research": [
+        "learning sciences spaced retrieval feedback assessment",
+        "education research formative assessment misconceptions transfer"
+      ],
+      "human_factors": [
+        "human factors workload situation awareness vigilance",
+        "ergonomics cognitive load alarms expertise errors"
+      ],
+      "ecology": [
+        "ecology disturbance resilience ecological memory ecosystems",
+        "community ecology competition mutualism species coexistence"
+      ],
+      "evolutionary_biology": [
+        "evolutionary biology fitness landscapes adaptive radiation",
+        "evolutionary bet hedging selection fluctuating environments"
+      ],
+      "animal_behavior": [
+        "collective animal behavior navigation group coordination",
+        "ant colonies decentralized foraging decision rules"
+      ],
+      "botany": [
+        "plant signalling tropism memory physiological adaptation",
+        "plant ecology seed dormancy environmental response"
+      ],
+      "marine_biology": [
+        "marine ecology coral reef resilience ecosystem networks",
+        "marine biology migration navigation species adaptation"
+      ],
+      "microbiology": [
+        "microbial biofilm quorum sensing collective adaptation",
+        "bacterial chemotaxis signaling adaptation memory"
+      ],
+      "public_health": [
+        "public health behavior intervention population inequalities",
+        "public health resilience health system preparedness"
+      ],
+      "epidemiology": [
+        "epidemiology contact networks superspreading interventions",
+        "causal inference observational epidemiology confounding"
+      ],
+      "immunology": [
+        "immune memory adaptive immunity specificity tolerance",
+        "immunology antigen recognition memory B cells response"
+      ],
+      "medicine": [
+        "clinical decision making differential diagnosis uncertainty",
+        "medical treatment evidence synthesis randomized clinical trials"
+      ],
+      "psychiatry": [
+        "psychiatry longitudinal symptoms relapse prediction clinical",
+        "mental health stress adaptation social determinants"
+      ],
+      "genetics": [
+        "gene regulatory networks transcription noise genetics",
+        "population genetics drift bottlenecks recombination"
+      ],
+      "physics": [
+        "statistical physics phase transitions metastability hysteresis",
+        "nonequilibrium thermodynamics fluctuation dissipation systems"
+      ],
+      "astronomy": [
+        "astronomy stellar evolution exoplanet transit observations",
+        "galaxy formation cosmic microwave background structure"
+      ],
+      "astrophysics": [
+        "astrophysics gravitational waves compact objects inference",
+        "stellar dynamics galactic halo dark matter astrophysics"
+      ],
+      "quantum_physics": [
+        "quantum information decoherence error correction theory",
+        "quantum measurement foundations uncertainty physics"
+      ],
+      "acoustics": [
+        "acoustics sound propagation resonance room geometry",
+        "psychoacoustics temporal masking sound perception"
+      ],
+      "fluid_mechanics": [
+        "fluid mechanics vortex shedding turbulent wake mixing",
+        "fluid dynamics coherent structures boundary layer transition"
+      ],
+      "chemistry": [
+        "chemical reaction networks catalysis dynamic equilibrium",
+        "supramolecular chemistry molecular self assembly kinetics"
+      ],
+      "materials_science": [
+        "materials fatigue crack propagation microscopic defects",
+        "materials science metamaterials microstructure properties"
+      ],
+      "polymer_science": [
+        "polymer rheology viscoelastic relaxation networks",
+        "polymer self healing dynamic crosslinks reversible bonds"
+      ],
+      "soft_matter": [
+        "soft matter granular jamming active matter physics",
+        "colloids gel networks emergent material properties"
+      ],
+      "food_science": [
+        "food science texture sensory perception formulation",
+        "food chemistry fermentation process optimization"
+      ],
+      "electrochemistry": [
+        "electrochemistry ion transport electrochemical kinetics",
+        "battery degradation interfaces electrochemistry experiments"
+      ],
+      "geology": [
+        "geology stratigraphic interpretation sediment transport",
+        "geological fault systems deformation earth history"
+      ],
+      "geophysics": [
+        "seismology earthquake early warning earth physics",
+        "geophysical inversion subsurface uncertainty"
+      ],
+      "meteorology": [
+        "meteorology atmospheric convection predictability weather",
+        "ensemble weather forecasts atmospheric fronts uncertainty"
+      ],
+      "oceanography": [
+        "oceanography circulation eddies mixing climate variability",
+        "ocean dynamics tidal currents transport patterns"
+      ],
+      "hydrology": [
+        "hydrology catchment resilience flood pulse dynamics",
+        "hydrological soil moisture drought memory effects"
+      ],
+      "environmental_science": [
+        "environmental science ecological thresholds pollution diffusion",
+        "environmental monitoring cumulative exposure resilience"
+      ],
+      "mathematics": [
+        "algebraic topology persistence geometry mathematics",
+        "optimal transport probability inequalities stochastic processes"
+      ],
+      "complex_systems": [
+        "complex adaptive systems emergence self organization",
+        "criticality complex systems resilience transitions"
+      ],
+      "network_science": [
+        "network centrality community formation robustness",
+        "temporal networks contagion synchronization theory"
+      ],
+      "operations_research": [
+        "robust optimization under uncertainty stochastic programming",
+        "multiobjective optimization queueing resource allocation"
+      ],
+      "information_theory": [
+        "rate distortion theory coding complexity statistics",
+        "information theory entropy causal information bottleneck"
+      ],
+      "control_theory": [
+        "viability theory constrained dynamics observability",
+        "robust control partial observation estimation stability"
+      ],
+      "urban_planning": [
+        "urban morphology neighborhood street networks public spaces",
+        "urban planning land use accessibility resilience"
+      ],
+      "industrial_engineering": [
+        "industrial engineering lean manufacturing variability buffers",
+        "production scheduling reliability human machine organization"
+      ],
+      "logistics_studies": [
+        "supply chain inventory bullwhip effect resilience",
+        "freight logistics port congestion network disruptions"
+      ],
+      "sports_science": [
+        "sports biomechanics motor coordination adaptation",
+        "athletic training periodization performance recovery science"
+      ],
+      "disaster_management": [
+        "disaster risk reduction emergency response coordination",
+        "wildfire evacuation flood response institutional resilience"
+      ],
+      "energy_systems": [
+        "electricity grid cascading failures resilience energy markets",
+        "power systems stability storage demand response"
+      ],
+      "communication_studies": [
+        "mass communication framing media agenda setting",
+        "risk communication misinformation trust information exposure"
+      ],
+      "organizational_behavior": [
+        "organizational learning routines collective memory adaptation",
+        "organizational behavior group decisions bounded awareness"
+      ],
+      "management_science": [
+        "management science process innovation empirical decision analysis",
+        "organizational slack exploration exploitation management research"
+      ],
+      "information_science": [
+        "information seeking relevance feedback search behavior",
+        "knowledge organization epistemic information practices"
+      ],
+      "library_science": [
+        "library information retrieval user information behavior",
+        "knowledge organization cataloging bibliometrics scientific fields"
+      ],
+      "innovation_studies": [
+        "technology innovation diffusion adjacent possible creativity",
+        "innovation studies recombination of knowledge patents networks"
+      ],
+      "culinary_science": [
+        "culinary science cooking heat transfer flavor chemistry",
+        "gastronomy sensory evaluation cooking technique research"
+      ],
+      "folkloristics": [
+        "folklore oral traditions cultural memory variation",
+        "folkloristics narrative motifs diffusion transmission"
+      ],
+      "fashion_studies": [
+        "fashion studies trends social identity historical change",
+        "fashion sociology symbolic consumption aesthetic diffusion"
+      ],
+      "tourism_studies": [
+        "tourism studies visitor experience place attachment",
+        "tourism destination resilience community adaptation"
+      ],
+      "museum_studies": [
+        "museum studies collections interpretation public engagement",
+        "museology exhibition curation visitor learning"
+      ],
+      "agricultural_science": [
+        "agricultural ecology cropping systems soil fertility",
+        "precision agriculture agroecological knowledge traditional management"
+      ]
+    }
+  },
+  "venue_shortlist_file": "references/venue_priority_shortlist.json",
+  "api": {
+    "provider": "OpenAlex",
+    "api_key_env": "OPENALEX_API_KEY",
+    "per_page": 75,
+    "pages_per_query_with_key": 2,
+    "max_requests_total": 420,
+    "max_queries_per_run": 25,
+    "minimum_request_interval_seconds": 0.17,
+    "timeout_seconds": 25,
+    "retry_429": 3
+  },
+  "retrieval": {
+    "download_fulltext_default": false,
+    "max_fulltext_pdfs_per_run": 10,
+    "max_pdf_size_mb": 32,
+    "min_extractable_pdf_chars": 600
+  },
+  "require_bibliographic_links": true,
+  "require_disjoint_counts": true,
+  "stop_on_quota_complete": true,
+  "preserve_existing_main_project_files": true,
+  "inspiration_domain_catalog_file": "references/inspiration_domain_catalog.json",
+  "inspiration_diversity": {
+    "enabled": true,
+    "apply_min_quota": 20,
+    "min_unique_domains": 24,
+    "min_macro_groups": 12,
+    "min_far_distance": 24,
+    "max_per_domain": 3,
+    "max_per_macro_group": 7,
+    "random_seed": 3407,
+    "random_tail_fraction": 0.2,
+    "custom_domains": {}
+  }
+}

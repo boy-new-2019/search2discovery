@@ -1,0 +1,3 @@
+# Authentic native-agent team and audits
+
+Economy default: S1 one Luna topic reviewer, S2 one Sol mechanism reviewer; activate skeptic or lead only on uncertainty. Fulltext R1 Luna, R2 Sol, R3 Sol literature evidence reviewer, R4 Astra adversary and Sol method reviewer, R5 Sol synthesis. Independent final audits use Sol evidence and Astra method reviews; a substantiated veto blocks completion. Balanced and Strict add redundancy; Strict uses three independent readers per original chunk per round. Never substitute the main controller role-playing multiple agents for genuine separate native threads. R3 never runs experiments or simulations.

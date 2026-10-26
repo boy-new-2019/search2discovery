@@ -1,0 +1,734 @@
+{
+  "version": "5.0.0",
+  "method_note": "heuristic_distance is a discovery diversity label, not an objective scientific measure. Categories are editorial search pools, not a claim of confirmed Nobel laureate papers or quality certification.",
+  "macro_groups": [
+    {
+      "id": "economics_decisions",
+      "name_zh": "Economics Decisions",
+      "distance": "far"
+    },
+    {
+      "id": "philosophy_logic",
+      "name_zh": "Philosophy Logic",
+      "distance": "far"
+    },
+    {
+      "id": "society_governance",
+      "name_zh": "Society Governance",
+      "distance": "far"
+    },
+    {
+      "id": "history_culture",
+      "name_zh": "History Culture",
+      "distance": "far"
+    },
+    {
+      "id": "arts_design",
+      "name_zh": "Arts Design",
+      "distance": "far"
+    },
+    {
+      "id": "mind_behavior",
+      "name_zh": "Mind Behavior",
+      "distance": "bridge"
+    },
+    {
+      "id": "ecology_evolution",
+      "name_zh": "Ecology Evolution",
+      "distance": "far"
+    },
+    {
+      "id": "health_medicine",
+      "name_zh": "Health Medicine",
+      "distance": "far"
+    },
+    {
+      "id": "physics_astronomy",
+      "name_zh": "Physics Astronomy",
+      "distance": "far"
+    },
+    {
+      "id": "chemistry_materials",
+      "name_zh": "Chemistry Materials",
+      "distance": "far"
+    },
+    {
+      "id": "earth_climate",
+      "name_zh": "Earth Climate",
+      "distance": "far"
+    },
+    {
+      "id": "formal_systems",
+      "name_zh": "Formal Systems",
+      "distance": "bridge"
+    },
+    {
+      "id": "built_world_logistics",
+      "name_zh": "Built World Logistics",
+      "distance": "far"
+    },
+    {
+      "id": "organizations_information",
+      "name_zh": "Organizations Information",
+      "distance": "far"
+    },
+    {
+      "id": "unexpected_everyday",
+      "name_zh": "Unexpected Everyday",
+      "distance": "far"
+    }
+  ],
+  "domains": [
+    {
+      "id": "nobel_economics",
+      "name_zh": "Nobel Economics",
+      "macro_group": "economics_decisions",
+      "macro_name_zh": "Economics Decisions",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "behavioral_economics",
+      "name_zh": "Behavioral Economics",
+      "macro_group": "economics_decisions",
+      "macro_name_zh": "Economics Decisions",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "economic_history",
+      "name_zh": "Economic History",
+      "macro_group": "economics_decisions",
+      "macro_name_zh": "Economics Decisions",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "development_economics",
+      "name_zh": "Development Economics",
+      "macro_group": "economics_decisions",
+      "macro_name_zh": "Economics Decisions",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "game_theory",
+      "name_zh": "Game Theory",
+      "macro_group": "economics_decisions",
+      "macro_name_zh": "Economics Decisions",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "market_design",
+      "name_zh": "Market Design",
+      "macro_group": "economics_decisions",
+      "macro_name_zh": "Economics Decisions",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "ecological_economics",
+      "name_zh": "Ecological Economics",
+      "macro_group": "economics_decisions",
+      "macro_name_zh": "Economics Decisions",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "philosophy",
+      "name_zh": "Philosophy",
+      "macro_group": "philosophy_logic",
+      "macro_name_zh": "Philosophy Logic",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "epistemology",
+      "name_zh": "Epistemology",
+      "macro_group": "philosophy_logic",
+      "macro_name_zh": "Philosophy Logic",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "ethics",
+      "name_zh": "Ethics",
+      "macro_group": "philosophy_logic",
+      "macro_name_zh": "Philosophy Logic",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "logic",
+      "name_zh": "Logic",
+      "macro_group": "philosophy_logic",
+      "macro_name_zh": "Philosophy Logic",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "philosophy_of_mind",
+      "name_zh": "Philosophy Of Mind",
+      "macro_group": "philosophy_logic",
+      "macro_name_zh": "Philosophy Logic",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "philosophy_of_science",
+      "name_zh": "Philosophy Of Science",
+      "macro_group": "philosophy_logic",
+      "macro_name_zh": "Philosophy Logic",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "sociology",
+      "name_zh": "Sociology",
+      "macro_group": "society_governance",
+      "macro_name_zh": "Society Governance",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "anthropology",
+      "name_zh": "Anthropology",
+      "macro_group": "society_governance",
+      "macro_name_zh": "Society Governance",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "political_science",
+      "name_zh": "Political Science",
+      "macro_group": "society_governance",
+      "macro_name_zh": "Society Governance",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "international_relations",
+      "name_zh": "International Relations",
+      "macro_group": "society_governance",
+      "macro_name_zh": "Society Governance",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "criminology",
+      "name_zh": "Criminology",
+      "macro_group": "society_governance",
+      "macro_name_zh": "Society Governance",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "legal_theory",
+      "name_zh": "Legal Theory",
+      "macro_group": "society_governance",
+      "macro_name_zh": "Society Governance",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "social_psychology",
+      "name_zh": "Social Psychology",
+      "macro_group": "society_governance",
+      "macro_name_zh": "Society Governance",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "archaeology",
+      "name_zh": "Archaeology",
+      "macro_group": "history_culture",
+      "macro_name_zh": "History Culture",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "history_of_science",
+      "name_zh": "History Of Science",
+      "macro_group": "history_culture",
+      "macro_name_zh": "History Culture",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "linguistics",
+      "name_zh": "Linguistics",
+      "macro_group": "history_culture",
+      "macro_name_zh": "History Culture",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "literary_studies",
+      "name_zh": "Literary Studies",
+      "macro_group": "history_culture",
+      "macro_name_zh": "History Culture",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "religious_studies",
+      "name_zh": "Religious Studies",
+      "macro_group": "history_culture",
+      "macro_name_zh": "History Culture",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "cultural_evolution",
+      "name_zh": "Cultural Evolution",
+      "macro_group": "history_culture",
+      "macro_name_zh": "History Culture",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "historical_geography",
+      "name_zh": "Historical Geography",
+      "macro_group": "history_culture",
+      "macro_name_zh": "History Culture",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "aesthetics",
+      "name_zh": "Aesthetics",
+      "macro_group": "arts_design",
+      "macro_name_zh": "Arts Design",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "musicology",
+      "name_zh": "Musicology",
+      "macro_group": "arts_design",
+      "macro_name_zh": "Arts Design",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "visual_arts",
+      "name_zh": "Visual Arts",
+      "macro_group": "arts_design",
+      "macro_name_zh": "Arts Design",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "film_media_studies",
+      "name_zh": "Film Media Studies",
+      "macro_group": "arts_design",
+      "macro_name_zh": "Arts Design",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "architecture",
+      "name_zh": "Architecture",
+      "macro_group": "arts_design",
+      "macro_name_zh": "Arts Design",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "design_theory",
+      "name_zh": "Design Theory",
+      "macro_group": "arts_design",
+      "macro_name_zh": "Arts Design",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "cognitive_science",
+      "name_zh": "Cognitive Science",
+      "macro_group": "mind_behavior",
+      "macro_name_zh": "Mind Behavior",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "neuroscience",
+      "name_zh": "Neuroscience",
+      "macro_group": "mind_behavior",
+      "macro_name_zh": "Mind Behavior",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "psychology",
+      "name_zh": "Psychology",
+      "macro_group": "mind_behavior",
+      "macro_name_zh": "Mind Behavior",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "behavioral_ecology",
+      "name_zh": "Behavioral Ecology",
+      "macro_group": "mind_behavior",
+      "macro_name_zh": "Mind Behavior",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "education_research",
+      "name_zh": "Education Research",
+      "macro_group": "mind_behavior",
+      "macro_name_zh": "Mind Behavior",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "human_factors",
+      "name_zh": "Human Factors",
+      "macro_group": "mind_behavior",
+      "macro_name_zh": "Mind Behavior",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "ecology",
+      "name_zh": "Ecology",
+      "macro_group": "ecology_evolution",
+      "macro_name_zh": "Ecology Evolution",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "evolutionary_biology",
+      "name_zh": "Evolutionary Biology",
+      "macro_group": "ecology_evolution",
+      "macro_name_zh": "Ecology Evolution",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "animal_behavior",
+      "name_zh": "Animal Behavior",
+      "macro_group": "ecology_evolution",
+      "macro_name_zh": "Ecology Evolution",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "botany",
+      "name_zh": "Botany",
+      "macro_group": "ecology_evolution",
+      "macro_name_zh": "Ecology Evolution",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "marine_biology",
+      "name_zh": "Marine Biology",
+      "macro_group": "ecology_evolution",
+      "macro_name_zh": "Ecology Evolution",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "microbiology",
+      "name_zh": "Microbiology",
+      "macro_group": "ecology_evolution",
+      "macro_name_zh": "Ecology Evolution",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "public_health",
+      "name_zh": "Public Health",
+      "macro_group": "health_medicine",
+      "macro_name_zh": "Health Medicine",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "epidemiology",
+      "name_zh": "Epidemiology",
+      "macro_group": "health_medicine",
+      "macro_name_zh": "Health Medicine",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "immunology",
+      "name_zh": "Immunology",
+      "macro_group": "health_medicine",
+      "macro_name_zh": "Health Medicine",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "medicine",
+      "name_zh": "Medicine",
+      "macro_group": "health_medicine",
+      "macro_name_zh": "Health Medicine",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "psychiatry",
+      "name_zh": "Psychiatry",
+      "macro_group": "health_medicine",
+      "macro_name_zh": "Health Medicine",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "genetics",
+      "name_zh": "Genetics",
+      "macro_group": "health_medicine",
+      "macro_name_zh": "Health Medicine",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "physics",
+      "name_zh": "Physics",
+      "macro_group": "physics_astronomy",
+      "macro_name_zh": "Physics Astronomy",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "astronomy",
+      "name_zh": "Astronomy",
+      "macro_group": "physics_astronomy",
+      "macro_name_zh": "Physics Astronomy",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "astrophysics",
+      "name_zh": "Astrophysics",
+      "macro_group": "physics_astronomy",
+      "macro_name_zh": "Physics Astronomy",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "quantum_physics",
+      "name_zh": "Quantum Physics",
+      "macro_group": "physics_astronomy",
+      "macro_name_zh": "Physics Astronomy",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "acoustics",
+      "name_zh": "Acoustics",
+      "macro_group": "physics_astronomy",
+      "macro_name_zh": "Physics Astronomy",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "fluid_mechanics",
+      "name_zh": "Fluid Mechanics",
+      "macro_group": "physics_astronomy",
+      "macro_name_zh": "Physics Astronomy",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "chemistry",
+      "name_zh": "Chemistry",
+      "macro_group": "chemistry_materials",
+      "macro_name_zh": "Chemistry Materials",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "materials_science",
+      "name_zh": "Materials Science",
+      "macro_group": "chemistry_materials",
+      "macro_name_zh": "Chemistry Materials",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "polymer_science",
+      "name_zh": "Polymer Science",
+      "macro_group": "chemistry_materials",
+      "macro_name_zh": "Chemistry Materials",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "soft_matter",
+      "name_zh": "Soft Matter",
+      "macro_group": "chemistry_materials",
+      "macro_name_zh": "Chemistry Materials",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "food_science",
+      "name_zh": "Food Science",
+      "macro_group": "chemistry_materials",
+      "macro_name_zh": "Chemistry Materials",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "electrochemistry",
+      "name_zh": "Electrochemistry",
+      "macro_group": "chemistry_materials",
+      "macro_name_zh": "Chemistry Materials",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "geology",
+      "name_zh": "Geology",
+      "macro_group": "earth_climate",
+      "macro_name_zh": "Earth Climate",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "geophysics",
+      "name_zh": "Geophysics",
+      "macro_group": "earth_climate",
+      "macro_name_zh": "Earth Climate",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "meteorology",
+      "name_zh": "Meteorology",
+      "macro_group": "earth_climate",
+      "macro_name_zh": "Earth Climate",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "oceanography",
+      "name_zh": "Oceanography",
+      "macro_group": "earth_climate",
+      "macro_name_zh": "Earth Climate",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "hydrology",
+      "name_zh": "Hydrology",
+      "macro_group": "earth_climate",
+      "macro_name_zh": "Earth Climate",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "environmental_science",
+      "name_zh": "Environmental Science",
+      "macro_group": "earth_climate",
+      "macro_name_zh": "Earth Climate",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "mathematics",
+      "name_zh": "Mathematics",
+      "macro_group": "formal_systems",
+      "macro_name_zh": "Formal Systems",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "complex_systems",
+      "name_zh": "Complex Systems",
+      "macro_group": "formal_systems",
+      "macro_name_zh": "Formal Systems",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "network_science",
+      "name_zh": "Network Science",
+      "macro_group": "formal_systems",
+      "macro_name_zh": "Formal Systems",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "operations_research",
+      "name_zh": "Operations Research",
+      "macro_group": "formal_systems",
+      "macro_name_zh": "Formal Systems",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "information_theory",
+      "name_zh": "Information Theory",
+      "macro_group": "formal_systems",
+      "macro_name_zh": "Formal Systems",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "control_theory",
+      "name_zh": "Control Theory",
+      "macro_group": "formal_systems",
+      "macro_name_zh": "Formal Systems",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "urban_planning",
+      "name_zh": "Urban Planning",
+      "macro_group": "built_world_logistics",
+      "macro_name_zh": "Built World Logistics",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "industrial_engineering",
+      "name_zh": "Industrial Engineering",
+      "macro_group": "built_world_logistics",
+      "macro_name_zh": "Built World Logistics",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "logistics_studies",
+      "name_zh": "Logistics Studies",
+      "macro_group": "built_world_logistics",
+      "macro_name_zh": "Built World Logistics",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "sports_science",
+      "name_zh": "Sports Science",
+      "macro_group": "built_world_logistics",
+      "macro_name_zh": "Built World Logistics",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "disaster_management",
+      "name_zh": "Disaster Management",
+      "macro_group": "built_world_logistics",
+      "macro_name_zh": "Built World Logistics",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "energy_systems",
+      "name_zh": "Energy Systems",
+      "macro_group": "built_world_logistics",
+      "macro_name_zh": "Built World Logistics",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "communication_studies",
+      "name_zh": "Communication Studies",
+      "macro_group": "organizations_information",
+      "macro_name_zh": "Organizations Information",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "organizational_behavior",
+      "name_zh": "Organizational Behavior",
+      "macro_group": "organizations_information",
+      "macro_name_zh": "Organizations Information",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "management_science",
+      "name_zh": "Management Science",
+      "macro_group": "organizations_information",
+      "macro_name_zh": "Organizations Information",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "information_science",
+      "name_zh": "Information Science",
+      "macro_group": "organizations_information",
+      "macro_name_zh": "Organizations Information",
+      "distance_to_mainline_heuristic": "bridge"
+    },
+    {
+      "id": "library_science",
+      "name_zh": "Library Science",
+      "macro_group": "organizations_information",
+      "macro_name_zh": "Organizations Information",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "innovation_studies",
+      "name_zh": "Innovation Studies",
+      "macro_group": "organizations_information",
+      "macro_name_zh": "Organizations Information",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "culinary_science",
+      "name_zh": "Culinary Science",
+      "macro_group": "unexpected_everyday",
+      "macro_name_zh": "Unexpected Everyday",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "folkloristics",
+      "name_zh": "Folkloristics",
+      "macro_group": "unexpected_everyday",
+      "macro_name_zh": "Unexpected Everyday",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "fashion_studies",
+      "name_zh": "Fashion Studies",
+      "macro_group": "unexpected_everyday",
+      "macro_name_zh": "Unexpected Everyday",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "tourism_studies",
+      "name_zh": "Tourism Studies",
+      "macro_group": "unexpected_everyday",
+      "macro_name_zh": "Unexpected Everyday",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "museum_studies",
+      "name_zh": "Museum Studies",
+      "macro_group": "unexpected_everyday",
+      "macro_name_zh": "Unexpected Everyday",
+      "distance_to_mainline_heuristic": "far"
+    },
+    {
+      "id": "agricultural_science",
+      "name_zh": "Agricultural Science",
+      "macro_group": "unexpected_everyday",
+      "macro_name_zh": "Unexpected Everyday",
+      "distance_to_mainline_heuristic": "far"
+    }
+  ]
+}

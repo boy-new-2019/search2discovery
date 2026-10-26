@@ -1,0 +1,40 @@
+# Research material and local workspace state must not be published.
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+*.sqlite
+*.sqlite3
+*.db
+__pycache__/
+.pytest_cache/
+.coverage
+*.py[cod]
+.venv/
+venv/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Research data, output, native receipts, and local configurations.
+input/
+cross_domain_input/
+output/
+goal.md
+native_config.json
+reading_config.json
+selection_config.json
+run_config.json
+router_config.json
+team_config.json
+research_cognition_config.json
+*.pdf
+*.zip
+# Avoid committing private notebooks and source media by default.
+*.docx
+*.pptx
+*.xlsx

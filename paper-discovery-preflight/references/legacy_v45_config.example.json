@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "main_direction": "Streaming 3D occupancy prediction, bird-eye-view scene representation, evidence-guided finite-capacity Gaussian memory, world models, temporal state revision and autonomous-driving decision planning.",
+  "core_keywords": [
+    "streaming occupancy",
+    "3d occupancy",
+    "occupancy prediction",
+    "gaussian occupancy",
+    "temporal occupancy",
+    "bev occupancy",
+    "evidence memory",
+    "streaming gaussian",
+    "occupancy world",
+    "world action model",
+    "memory augmented autonomous driving",
+    "driving task state",
+    "world model planning",
+    "end to end driving world model"
+  ],
+  "related_keywords": [
+    "autonomous driving",
+    "scene occupancy",
+    "bird eye view",
+    "bev",
+    "multi camera perception",
+    "sensor fusion",
+    "lidar vision",
+    "world model",
+    "motion forecasting",
+    "driving planning",
+    "end to end driving",
+    "trajectory prediction",
+    "temporal perception",
+    "state estimation",
+    "gaussian representation",
+    "3d reconstruction",
+    "vision language action"
+  ],
+  "quotas": {
+    "core": 50,
+    "related": 150,
+    "inspiration": 50
+  },
+  "category_disjoint": true,
+  "recent_years": 3,
+  "extension_years": 5,
+  "oldest_publication_year": 2006,
+  "as_of_date": null,
+  "min_title_length": 16,
+  "min_classification_score": {
+    "core": 3.2,
+    "related": 2.0,
+    "inspiration": 0.0
+  },
+  "top_venue_bonus": 8,
+  "preferred_domains": {
+    "nobel_economics": 6,
+    "philosophy": 5,
+    "sociology": 5,
+    "cognitive_science": 5,
+    "mathematics": 5,
+    "complex_systems": 5,
+    "ecology": 4,
+    "history_of_science": 4,
+    "design_theory": 3
+  },
+  "queries": {
+    "core": [
+      "streaming 3D occupancy prediction temporal memory",
+      "gaussian occupancy autonomous driving temporal",
+      "streaming sparse gaussian occupancy representation",
+      "3D occupancy forecasting memory autonomous driving",
+      "temporal bird eye view occupancy camera perception",
+      "evidence conditioned streaming occupancy estimation",
+      "fixed capacity memory occupancy prediction"
+    ],
+    "related": [
+      "BEV perception multi camera autonomous driving",
+      "vision LiDAR fusion bird eye view driving",
+      "end to end autonomous driving world model",
+      "world action model planning autonomous driving",
+      "dynamic occupancy forecasting temporal vision",
+      "driving scene understanding planning perception",
+      "trajectory prediction memory world models",
+      "3D gaussian scene representation automotive",
+      "latent state estimation partial observation control",
+      "vision language action driving planning",
+      "self supervised world model autonomous navigation",
+      "sequential decision making memory constrained observation"
+    ],
+    "inspiration": {
+      "nobel_economics": [
+        "bounded rationality incomplete information Herbert Simon",
+        "prospect theory decision uncertainty economics",
+        "Elinor Ostrom institutions cooperation commons",
+        "economic mechanism design information cost"
+      ],
+      "philosophy": [
+        "epistemology belief revision evidence philosophy",
+        "philosophy of science underdetermination explanation"
+      ],
+      "sociology": [
+        "social networks diffusion collective behavior sociology",
+        "social norms trust cooperation institutional sociology"
+      ],
+      "cognitive_science": [
+        "predictive processing brain memory cognitive science",
+        "human memory reconsolidation belief updating neuroscience"
+      ],
+      "mathematics": [
+        "information bottleneck variational information theory",
+        "optimal transport partially observed stochastic process"
+      ],
+      "complex_systems": [
+        "complex adaptive systems emergent dynamics",
+        "self organized criticality collective adaptation"
+      ],
+      "ecology": [
+        "ecological memory resilience disturbance",
+        "ecosystem adaptation resource competition modeling"
+      ],
+      "history_of_science": [
+        "history philosophy science scientific revolutions",
+        "technological evolution scientific invention history"
+      ],
+      "design_theory": [
+        "design reasoning analogical transfer design research",
+        "systems design problem framing creativity innovation"
+      ]
+    }
+  },
+  "venue_shortlist_file": "references/venue_priority_shortlist.json",
+  "api": {
+    "provider": "OpenAlex",
+    "api_key_env": "OPENALEX_API_KEY",
+    "per_page": 75,
+    "pages_per_query_with_key": 2,
+    "max_requests_total": 220,
+    "max_queries_per_run": 25,
+    "minimum_request_interval_seconds": 0.17,
+    "timeout_seconds": 25,
+    "retry_429": 3
+  },
+  "retrieval": {
+    "download_fulltext_default": false,
+    "max_fulltext_pdfs_per_run": 10,
+    "max_pdf_size_mb": 32,
+    "min_extractable_pdf_chars": 600
+  },
+  "require_bibliographic_links": true,
+  "require_disjoint_counts": true,
+  "stop_on_quota_complete": true,
+  "preserve_existing_main_project_files": true
+}

@@ -1,0 +1,56 @@
+{
+  "rounds": 5,
+  "chunk_chars": 36000,
+  "group_size": 10,
+  "max_audit_repairs": 2,
+  "max_call_retries": 2,
+  "paper_formats": [
+    ".pdf",
+    ".md",
+    ".txt",
+    ".tex"
+  ],
+  "codex": {
+    "models": {
+      "r1": "gpt-6-luna",
+      "r2": "gpt-6-astra",
+      "r3": "gpt-6.1-sol",
+      "r4": "gpt-6-astra",
+      "r5": "gpt-6.1-sol",
+      "r6": "gpt-6-astra",
+      "r7": "gpt-6.1-sol",
+      "merge": "gpt-6.1-sol",
+      "group": "gpt-6-sol",
+      "master": "gpt-6-astra",
+      "final": "gpt-6-astra",
+      "audit": "gpt-6.1-sol",
+      "screen_s1": "gpt-6-luna",
+      "screen_s2": "gpt-6.1-sol"
+    },
+    "reasoning_effort": {
+      "r1": "high",
+      "r2": "xhigh",
+      "r3": "xhigh",
+      "r4": "xhigh",
+      "r5": "xhigh",
+      "default": "xhigh",
+      "screen_s1": "medium",
+      "screen_s2": "high"
+    },
+    "timeout_seconds": 900,
+    "binary": "codex"
+  },
+  "api": {
+    "base_url": "https://api.example.com/v1",
+    "key_env": "DEEPREAD_API_KEY",
+    "models": {
+      "default": "CHANGE_TO_A_MODEL_ID",
+      "screen_s1": "CHANGE_TO_FAST_MODEL_ID",
+      "screen_s2": "CHANGE_TO_STRONG_MODEL_ID"
+    },
+    "timeout_seconds": 240,
+    "temperature": null,
+    "top_p": null,
+    "max_completion_tokens": null
+  }
+}

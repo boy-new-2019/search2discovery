@@ -1,0 +1,173 @@
+{
+  "schema_version": 3,
+  "enabled": true,
+  "agents": {
+    "topic": {
+      "identity": "Topical relevance expert",
+      "brief": "Review literature, methods and authentic source evidence independently; prepare research or experiment designs only, never execute any tests or simulations.",
+      "codex_model": "gpt-6-luna",
+      "api_model": "CHANGE_TO_MODEL_ID",
+      "effort": "high",
+      "temperature": null
+    },
+    "method": {
+      "identity": "Method and mathematics expert",
+      "brief": "Review literature, methods and authentic source evidence independently; prepare research or experiment designs only, never execute any tests or simulations.",
+      "codex_model": "gpt-6-astra",
+      "api_model": "CHANGE_TO_MODEL_ID",
+      "effort": "xhigh",
+      "temperature": null
+    },
+    "experimentalist": {
+      "identity": "Published-results analyst",
+      "brief": "Critically analyze paper-reported experiments and qualitative, non-executable thought scenarios only; never perform experiments, tests, simulations or training.",
+      "codex_model": "gpt-6.1-sol",
+      "api_model": "CHANGE_TO_MODEL_ID",
+      "effort": "xhigh",
+      "temperature": null
+    },
+    "reproducer": {
+      "identity": "Reproducibility planning expert",
+      "brief": "Review literature, methods and authentic source evidence independently; prepare research or experiment designs only, never execute any tests or simulations.",
+      "codex_model": "gpt-6-sol",
+      "api_model": "CHANGE_TO_MODEL_ID",
+      "effort": "high",
+      "temperature": null
+    },
+    "transfer": {
+      "identity": "Interdisciplinary transfer analyst",
+      "brief": "Review literature, methods and authentic source evidence independently; prepare research or experiment designs only, never execute any tests or simulations.",
+      "codex_model": "gpt-6.1-sol",
+      "api_model": "CHANGE_TO_MODEL_ID",
+      "effort": "high",
+      "temperature": null
+    },
+    "skeptic": {
+      "identity": "Adversarial scholarly reviewer",
+      "brief": "Review literature, methods and authentic source evidence independently; prepare research or experiment designs only, never execute any tests or simulations.",
+      "codex_model": "gpt-6-astra",
+      "api_model": "CHANGE_TO_MODEL_ID",
+      "effort": "xhigh",
+      "temperature": null
+    },
+    "synthesist": {
+      "identity": "Cross-paper evidence synthesist",
+      "brief": "Review literature, methods and authentic source evidence independently; prepare research or experiment designs only, never execute any tests or simulations.",
+      "codex_model": "gpt-6.1-sol",
+      "api_model": "CHANGE_TO_MODEL_ID",
+      "effort": "xhigh",
+      "temperature": null
+    },
+    "screen_captain": {
+      "identity": "Independent screening captain",
+      "brief": "Review literature, methods and authentic source evidence independently; prepare research or experiment designs only, never execute any tests or simulations.",
+      "codex_model": "gpt-6.1-sol",
+      "api_model": "CHANGE_TO_MODEL_ID",
+      "effort": "xhigh",
+      "temperature": null
+    },
+    "core_captain": {
+      "identity": "Independent full-text reading captain",
+      "brief": "Review literature, methods and authentic source evidence independently; prepare research or experiment designs only, never execute any tests or simulations.",
+      "codex_model": "gpt-6-astra",
+      "api_model": "CHANGE_TO_MODEL_ID",
+      "effort": "xhigh",
+      "temperature": null
+    },
+    "general_manager": {
+      "identity": "Research general manager",
+      "brief": "Review literature, methods and authentic source evidence independently; prepare research or experiment designs only, never execute any tests or simulations.",
+      "codex_model": "gpt-6-astra",
+      "api_model": "CHANGE_TO_MODEL_ID",
+      "effort": "xhigh",
+      "temperature": null
+    },
+    "audit_evidence": {
+      "identity": "Independent evidence auditor",
+      "brief": "Review literature, methods and authentic source evidence independently; prepare research or experiment designs only, never execute any tests or simulations.",
+      "codex_model": "gpt-6.1-sol",
+      "api_model": "CHANGE_TO_MODEL_ID",
+      "effort": "xhigh",
+      "temperature": null
+    },
+    "audit_methods": {
+      "identity": "Independent methodological auditor",
+      "brief": "Review literature, methods and authentic source evidence independently; prepare research or experiment designs only, never execute any tests or simulations.",
+      "codex_model": "gpt-6-astra",
+      "api_model": "CHANGE_TO_MODEL_ID",
+      "effort": "xhigh",
+      "temperature": null
+    }
+  },
+  "rosters": {
+    "screen_S1": [
+      "topic",
+      "transfer",
+      "skeptic"
+    ],
+    "screen_S2": [
+      "method",
+      "experimentalist",
+      "skeptic"
+    ],
+    "R1": [
+      "topic",
+      "transfer",
+      "skeptic"
+    ],
+    "R2": [
+      "method",
+      "reproducer",
+      "skeptic"
+    ],
+    "R3": [
+      "experimentalist",
+      "reproducer",
+      "skeptic"
+    ],
+    "R4": [
+      "skeptic",
+      "method",
+      "experimentalist"
+    ],
+    "R5": [
+      "synthesist",
+      "transfer",
+      "skeptic"
+    ],
+    "R_default": [
+      "synthesist",
+      "method",
+      "skeptic"
+    ],
+    "audit": [
+      "audit_evidence",
+      "audit_methods"
+    ]
+  },
+  "lead_roles": {
+    "screen": "screen_captain",
+    "leaf": "core_captain",
+    "merge": "core_captain",
+    "group": "synthesist",
+    "master": "general_manager",
+    "final": "general_manager"
+  },
+  "arbitration": {
+    "score_spread": 1.7,
+    "adversarial_second_opinion": true,
+    "force_hold_on_conflict": true,
+    "veto_on_any_audit_failure": true,
+    "preserve_all_member_evidence": true
+  },
+  "execution": {
+    "max_parallel_agent_workers": 3,
+    "max_global_parallel_calls": 6,
+    "max_total_model_calls_per_workspace": 10000,
+    "max_team_prompt_chars": 260000,
+    "max_call_retries": 2,
+    "min_independent_readers": 2,
+    "retry_backoff_seconds": 0,
+    "require_independent_process_receipts": true
+  }
+}

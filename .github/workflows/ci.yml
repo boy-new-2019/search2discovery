@@ -1,0 +1,32 @@
+name: Offline Python regression
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install PDF readers for test coverage
+        # PyMuPDF is an optional AGPL/commercial component used only for PDF fixture/render tests.
+        run: python -m pip install 'pypdf>=4' 'PyMuPDF>=1.23'
+      - name: v4.4 reading workflow
+        run: python -m unittest discover -s batch-paper-deepread-desktop/tests -q
+      - name: v5 discovery
+        run: python -m unittest discover -s paper-discovery-preflight/tests -q
+      - name: v6 evidence, reasoning and orchestration
+        run: python -m unittest discover -s research-cognition-engine/tests -q
+      - name: Original integration
+        run: python -m unittest tests_original_merge -q
+      - name: Public release, install and permissive PDF fallback
+        run: python -m unittest discover -s tests -q

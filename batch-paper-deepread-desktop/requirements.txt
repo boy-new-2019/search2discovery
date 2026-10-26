@@ -1,0 +1,4 @@
+# Core orchestration uses Python 3.10+ standard library; no mandatory pip dependencies.
+# To parse PDF files, install the first optional dependency below:
+PyMuPDF>=1.23
+# If PyMuPDF is unavailable, pypdf>=4.0 may be installed as an alternative.

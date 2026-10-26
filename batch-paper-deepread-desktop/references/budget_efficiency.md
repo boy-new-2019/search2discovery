@@ -1,0 +1,3 @@
+# Evidence-preserving budget efficiency
+
+The user has a finite model dispatch budget. Separate title/metadata screening from high-cost fulltext review. Prefer deterministic data processing, cached original-source slices and stable signed prompt hashes. Reuse validated evidence and completed tasks; escalate skeptical and method reviews on uncertainty rather than multiplying all reads by default. Keep five rounds for core papers, and double independent final audit with vetoes. Save checkpoints and allow the user to confirm actual weekly quota recovery. Character caps and dispatch counters are local proxies, never live product usage statistics.

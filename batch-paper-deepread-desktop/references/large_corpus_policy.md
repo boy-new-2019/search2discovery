@@ -1,0 +1,3 @@
+# Large-corpus reading policy
+
+The initial bibliography may exceed 250 works, but a large metadata pool must never be treated as a core fulltext cohort. Group genuinely readable candidates into stable S1/S2 screening batches, preserve page-quoted evidence and reasoned decisions. Freeze a justified, coverage-aware core; protect the snapshot. Run five complete full-text rounds only on admitted core papers. Missing full text, OCR-sensitive scans and altered files must be explicit unresolved gaps. No fabricated DOIs, metrics, times, ranks or paper provenance. Sampled screening can miss content; audit borderline exclusions and high-impact sources as resources allow.

@@ -1,0 +1,11 @@
+{
+  "schema_version": 4,
+  "engine": "codex",
+  "allow_model_calls": false,
+  "allow_online_search": false,
+  "allow_pdf_download": false,
+  "accept_discovery_gap": false,
+  "max_jobs_per_launch": 20,
+  "display_plan_before_run": true,
+  "enable_fast_core_pipeline": true
+}

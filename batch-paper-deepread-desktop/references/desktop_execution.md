@@ -1,0 +1,3 @@
+# Codex Desktop native execution
+
+The lead opens the installed workspace in Windows Codex Desktop, invokes the Skill, reads prepared prompts, dispatches authentic named separate subagent threads and collects answer JSON and visible thread receipts. Python tools perform local preparation, verification, provenance storage and reports. No CLI loop (`codex exec`) or fake independent reviewers. The lead should not silently call external models or create uncontrolled background tasks. Use `research-cognition-engine/scripts/native_v44_launcher.py` to integrate original reading engines with v5 topic catalogs and v6 evidence sync.

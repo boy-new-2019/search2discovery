@@ -1,0 +1,42 @@
+{
+  "schema_version": 4,
+  "mode": "adaptive",
+  "models": {
+    "economy": "gpt-6-luna",
+    "balanced": "gpt-6.1-sol",
+    "deep": "gpt-6-astra"
+  },
+  "efforts": {
+    "routine": "low",
+    "standard": "medium",
+    "difficult": "high",
+    "critical": "xhigh"
+  },
+  "thresholds": {
+    "large_screen_prompt_chars": 63000,
+    "large_leaf_prompt_chars": 46000,
+    "very_long_prompt_chars": 130000,
+    "retry_escalate_from": 2
+  },
+  "role_pins": {},
+  "stage_pins": {},
+  "availability": {
+    "require_live_probe": false,
+    "max_probe_age_hours": 168,
+    "allow_verified_fallback": true,
+    "allow_critical_downgrade": false
+  },
+  "efficiency": {
+    "screen_captain_strategy": "adaptive",
+    "screen_consensus_max_score_spread": 0.65,
+    "screen_consensus_min_evidence_quality": 3.4,
+    "screen_consensus_require_no_uncertainty": true,
+    "core_parallel_leaf_jobs": 4,
+    "relative_model_cost_weights": {
+      "economy": 1,
+      "balanced": 3,
+      "deep": 7
+    },
+    "leaf_captain_strategy": "adaptive"
+  }
+}

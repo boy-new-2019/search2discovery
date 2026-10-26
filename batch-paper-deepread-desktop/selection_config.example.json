@@ -1,0 +1,54 @@
+{
+  "schema_version": 2,
+  "screen_batch_size": 16,
+  "screen_excerpt_chars_per_paper": 2600,
+  "core_target": 10,
+  "core_min": 6,
+  "core_max": 80,
+  "keep_threshold": 2.85,
+  "reject_threshold": 2.15,
+  "max_candidates": 1000,
+  "max_discovery_waves": 1,
+  "max_proposals_per_wave": 30,
+  "max_supplemental_pdfs": 8,
+  "max_pdf_mb": 30,
+  "min_supplemental_pdfs": 0,
+  "min_publication_year": 2023,
+  "coverage_themes": [
+    {
+      "name": "3D Occupancy/BEV",
+      "min_core": 2
+    },
+    {
+      "name": "Streaming/Temporal Memory",
+      "min_core": 2
+    },
+    {
+      "name": "World Model/Prediction",
+      "min_core": 1
+    },
+    {
+      "name": "End-to-end Driving",
+      "min_core": 1
+    },
+    {
+      "name": "Methods/Evaluation",
+      "min_core": 1
+    },
+    {
+      "name": "Other",
+      "min_core": 0
+    }
+  ],
+  "search_queries": [
+    "streaming 3D occupancy Gaussian memory autonomous driving",
+    "temporal BEV occupancy prediction autonomous vehicles",
+    "world model action prediction end to end autonomous driving",
+    "memory augmented planning limited observations autonomous driving"
+  ],
+  "openalex_api_key_env": "OPENALEX_API_KEY",
+  "offline_by_default": true,
+  "parallel_screen_workers": 4,
+  "max_download_per_wave": 6,
+  "min_supplemental_qualified": 0
+}
