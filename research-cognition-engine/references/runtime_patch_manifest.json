@@ -30,8 +30,8 @@
     },
     "scripts/deepread.py": {
       "before_sha256": "d611c43fea10baba3b880ceff28461d2ee6e72bcaabe1c573f49cb692e2669d9",
-      "after_sha256": "de2a1c74b721113f3399031771a5c30cd892468e076feb4d73f57099d562fc13",
-      "reason": "Use extended Win32 paths at filesystem boundaries for nested frozen-core answer and receipt files; retain task identifiers and evidence validation."
+      "after_sha256": "c69edeba3dbe825792e57cc5740b4b74d7a0e8dd9b9d9c160e77a50b486e746b",
+      "reason": "Use extended Win32 paths at filesystem boundaries for nested frozen-core answer, receipt and rendered source-page files; retain task identifiers and evidence validation."
     }
   }
 }

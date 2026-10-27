@@ -1168,7 +1168,7 @@ def render_pdf(ctx: dict, pid: str, pages: list[int], dpi: int) -> None:
         raise RuntimeError('Cannot render PDF visual pages: install PyMuPDF (fitz) in this Python environment.') from exc
     src = ctx["ws"] / "input" / Path(row["file"])
     doc = fitz.open(src)
-    dest = ctx["run"] / "visual_pages" / pid
+    dest = filesystem_path(ctx["run"] / "visual_pages" / pid)
     dest.mkdir(parents=True, exist_ok=True)
     try:
         for p in pages:

@@ -5,6 +5,7 @@ This document complements the public Skill; consult the sibling cognition Skill 
 ## Bounded loop
 
 1. Inspect `topic-next` and signed pending manifests. Reuse completed receipts before preparing anything new.
+   Pass the active workspace installation’s absolute `suite.py` path to delegated reviewers. Do not select a script through an unrestricted recursive search: preserved installation backups contain valid historical entrypoints with different compatibility behavior.
 2. Run authorized deterministic actions with `topic-auto`. It may stop after one network/download batch intentionally.
 3. For a prepared native task, read its dispatch, profile and exact prompt. Start the requested real independent thread with the required available model settings, wait, collect with the actual thread reference and commit. Do not fabricate thread references or manually advance stages.
 4. Repeat until a final positive plan, independently reviewed no-viable conclusion, explicit user budget/time boundary or a concrete external blocker. Requesting a broad campaign does not require per-batch confirmation.
