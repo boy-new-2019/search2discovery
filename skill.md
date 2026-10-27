@@ -21,3 +21,5 @@
 - Metadata sufficiency, reviewed query-pass coverage, genuine fulltext reading, and independent scientific conclusion are separate gates. A missing DOI is a task-local negative lookup, not whole-source failure or successful query coverage.
 
 - For large cognition memories, pack whole source-balanced records and retain a hash-bound complete index. Pin linked evidence; FINAL needs actual committed plans and novelty objections, while independent novelty reviewers remain blinded.
+
+- Fulltext task selection counts evidence by work and deduplicates PDF/source aliases. Prefer already anchored works before download-only files, then lower covered works; keep download-only startup and the complete lookup index available. This is evidence routing, not a scientific quality verdict.

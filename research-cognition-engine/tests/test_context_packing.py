@@ -73,6 +73,33 @@ class PackingTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"immutable"):
                 context_packing.archive(ws,sources,rows)
 
+    def test_fulltext_selection_balances_works_and_prefers_reviewed_alias(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ws=pathlib.Path(tmp)
+            with store.connect(ws) as c:
+                for wid,year in [('A',2024),('B',2025),('UNREAD',2026)]:
+                    c.execute('INSERT INTO works(work_id,title,category,year,record_sha) VALUES(?,?,?,?,?)',(wid,wid,'core',year,wid))
+                for sid,wid,digest in [('A','A','hashA'),('A-V44','A','hashA'),('B','B','hashB'),('U','UNREAD','hashU')]:
+                    c.execute('INSERT INTO sources VALUES(?,?,?,?,?,?,?)',(sid,wid,sid+'.pdf',digest,3,sid+'.json','now'))
+                for cid,sid,wid in [('C1','A-V44','A'),('C2','A-V44','A'),('C3','B','B')]:
+                    c.execute('INSERT INTO claims VALUES(?,?,?,?,?,?,?,?,?,?)',(cid,sid,wid,'Evidence','METHOD',1,'Quote','reader','ANCHOR_CHECKED','now'))
+            rows=engine._sources(ws,2)
+            self.assertEqual([r['source_id'] for r in rows],['B','A-V44'])
+            self.assertEqual(len({r['work_id'] for r in rows}),2)
+            self.assertNotIn('work_claims',rows[0])
+            self.assertEqual([r['source_id'] for r in engine._sources(ws,3)],['B','A-V44','U'])
+
+    def test_download_only_selection_remains_available_without_claims(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ws=pathlib.Path(tmp)
+            with store.connect(ws) as c:
+                for wid,year in [('A',2024),('B',2026)]:
+                    c.execute('INSERT INTO works(work_id,title,category,year,record_sha) VALUES(?,?,?,?,?)',(wid,wid,'related',year,wid))
+                for sid,wid in [('A','A'),('A-V44','A'),('B','B')]:
+                    c.execute('INSERT INTO sources VALUES(?,?,?,?,?,?,?)',(sid,wid,sid+'.pdf','hash'+wid,2,sid+'.json','now'))
+            self.assertEqual([r['source_id'] for r in engine._sources(ws,8)],['B','A'])
+            self.assertEqual(engine._sources(ws,0),[])
+
     def test_final_retains_actual_reviews_and_plans_not_blinded_novelty(self):
         with tempfile.TemporaryDirectory() as tmp:
             ws=pathlib.Path(tmp)

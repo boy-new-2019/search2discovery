@@ -70,13 +70,25 @@ def stage(ws:pathlib.Path)->tuple[dict,str]:
     return s,s['cycles'][-1]['stage']
 
 def _sources(ws:pathlib.Path,max_n:int)->list[dict]:
+    # Review-backed works precede download-only files. Count evidence by work,
+    # not alias: the original reader may anchor claims on a -V44 source while
+    # the initial registration of the same PDF has no direct claim rows.
     with store.connect(ws) as c:
         rows=c.execute('''SELECT s.source_id,s.work_id,s.file_path,s.file_sha,s.page_count,
-                                 w.title,w.category
+                                 w.title,w.category,
+                                 (SELECT COUNT(*) FROM claims cl WHERE cl.work_id=s.work_id) AS work_claims,
+                                 (SELECT COUNT(*) FROM claims cl WHERE cl.source_id=s.source_id) AS source_claims
                           FROM sources s JOIN works w ON w.work_id=s.work_id
-                          ORDER BY (SELECT COUNT(*) FROM claims cl WHERE cl.source_id=s.source_id) ASC,
-                                   w.year DESC, w.work_id ASC LIMIT ?''',(max_n,)).fetchall()
-    return [dict(x) for x in rows]
+                          ORDER BY (work_claims>0) DESC,work_claims ASC,
+                                   w.year DESC,w.work_id ASC,source_claims DESC,s.source_id ASC''').fetchall()
+    result=[];seen_works=set();seen_files=set()
+    for item in rows:
+        if len(result)>=max_n:break
+        row=dict(item)
+        if row['work_id'] in seen_works or row['file_sha'] in seen_files:continue
+        seen_works.add(row['work_id']);seen_files.add(row['file_sha'])
+        row.pop('work_claims');row.pop('source_claims');result.append(row)
+    return result
 
 def _context(ws:pathlib.Path,kind:str,cfg:dict)->dict:
     with store.connect(ws) as c:
