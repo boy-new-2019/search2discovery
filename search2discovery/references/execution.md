@@ -61,3 +61,7 @@ A successful native commit and downstream memory synchronization are separate ch
 ## Final delivery
 
 Provide `research_landscape.md`, a paper/mechanism comparison, gaps, candidate dispositions, novelty assessment, experiment blueprint, concrete `final_route_and_method.md` / `route_selection.json`, and a Chinese final report plus execution summary. Existing filenames from legacy campaigns remain usable. The final recommendation must cite real work/source identities, distinguish proposed from source-reported methods, and name unresolved semantic and empirical questions. No-viable output records why every candidate failed and the smallest discriminating next evidence; it is not a fabricated positive result.
+
+## Bounded cognition evidence handoff
+
+The cognition prompt packs complete anchored claim records across sources and claim kinds within the existing character cap. It preserves hypothesis-linked and contradiction-linked claims, and fails explicitly if required stage evidence cannot fit. A content-addressed complete index retains omitted claims and original source paths/hashes; sampling is not exhaustive review. FINAL receives committed experiment plans and both independent novelty assessments, while NOVELTY remains blinded to other novelty verdicts. Do not raise caps or truncate quotations to conceal an oversized prompt.

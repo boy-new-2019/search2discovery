@@ -11,3 +11,5 @@
 - Preserve user research workspaces while repairing the public tool. Validate Windows/Ubuntu and Python 3.11/3.12 compatibility through the declared CI matrix.
 
 - Live campaign repair: preserve sealed-core identifiers and signed answers across filesystem fixes; a native commit and memory synchronization are separate checkpoints. Never alter source text or reviewer receipts to satisfy an integration gate.
+
+- Keep required scientific evidence and independent verdicts in stage handoffs; obey the existing context cap without quote truncation or silently raising limits.

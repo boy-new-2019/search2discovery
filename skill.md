@@ -19,3 +19,5 @@
 - Reader-normalized PDF quotations must map back to exact original-page spans before entering the stricter memory store; retain native and literal quotation provenance.
 - Preserve immutable selection-report bytes in evidence-gain events, reselect after new screening, and forward actual independent captain answers through the public entrypoint.
 - Metadata sufficiency, reviewed query-pass coverage, genuine fulltext reading, and independent scientific conclusion are separate gates. A missing DOI is a task-local negative lookup, not whole-source failure or successful query coverage.
+
+- For large cognition memories, pack whole source-balanced records and retain a hash-bound complete index. Pin linked evidence; FINAL needs actual committed plans and novelty objections, while independent novelty reviewers remain blinded.
