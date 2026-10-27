@@ -84,7 +84,7 @@ def start(ws:pathlib.Path,topic:str)->dict:
             'goal_sha256':store.hashbytes(goal.read_bytes()),
             'created_goal':created,'started_at':store.utc(),
             'state':'AWAITING_NATIVE_TOPIC_INTERPRETATION',
-            'experiment_execution_enabled':False,
+            'experiment_execution_enabled':False,'route_contract_version':2,
             'paper_quotas':{'core':50,'related':150,'inspiration':50}}
     store.write(contract_path(ws),record)
     template={
@@ -227,6 +227,9 @@ def commit(ws:pathlib.Path,brief_path:pathlib.Path)->dict:
     rec['reviewed_sha256']=store.hashbytes((here(ws)/'topic_brief_reviewed.json').read_bytes())
     rec['reviewer_role']=b['reviewer_role'];rec['reviewer_thread_ref']=b['reviewer_thread_ref']
     store.write(contract_path(ws),rec)
+    if rec.get('route_contract_version',1)>=2:
+        from literature_sources.coordinator import configure
+        configure(ws)
     return {'status':'TOPIC_CONFIG_COMMITTED','topic':rec['topic'],
             'as_of_date':rec['as_of_date'],'v5_quota':v5['quotas'],
             'configured_core_queries':len(v5['queries']['core']),
@@ -247,6 +250,9 @@ def venues(ws:pathlib.Path)->dict:
     cfg=V5.config(ws)
     library=ws/'output'/'discovery_preflight'/'state.json'
     allworks=store.read(library).get('works',{}) if library.is_file() else {}
+    if (ws/'source_routing.json').is_file():
+        import multisource_bridge
+        allworks={**allworks,**multisource_bridge.venue_records(ws)}
     hints=store.read(here(ws)/'topic_brief_reviewed.json')['venue_hints']
     groups={}
     for w in allworks.values():
@@ -314,7 +320,7 @@ def _verified_download_stats(ws:pathlib.Path)->dict:
     f=ws/'output'/'discovery_preflight'/'state.json'
     if not f.is_file():return {'core':0,'related':0,'inspiration':0,'total':0,'tampered':[]}
     records=store.read(f).get('download_log',{})
-    counts=Counter();bad=[]
+    counts=Counter();bad=[];digests=set()
     for wid,rec in records.items():
         if rec.get('status')!='FULLTEXT_READY':continue
         rel=pathlib.Path(rec.get('relative_path',''))
@@ -323,7 +329,12 @@ def _verified_download_stats(ws:pathlib.Path)->dict:
         source=(ws/rel).resolve()
         if not source.is_relative_to(ws) or not source.is_file() or store.hashbytes(source.read_bytes())!=rec.get('sha256'):
             bad.append(wid);continue
-        counts[rec.get('category','other')]+=1
+        counts[rec.get('category','other')]+=1;digests.add(rec['sha256'])
+    if (ws/'source_routing.json').is_file():
+        import multisource_bridge
+        for item in multisource_bridge.downloads(ws):
+            if item['sha256'] not in digests:
+                counts[item['category'] or 'other']+=1;digests.add(item['sha256'])
     if bad:raise ValueError('Source path, lawful access or network permission check failed at topic_to_plan._verified_download_stats (check 327). Do not bypass paywalls or source integrity checks.'+str(bad[:5]))
     return {'core':counts['core'],'related':counts['related'],'inspiration':counts['inspiration'],
             'total':sum(counts.values()),'tampered':[]}
@@ -360,6 +371,19 @@ def next_action(ws:pathlib.Path,*,allow_incomplete_discovery:bool=False)->dict:
     # Already frozen scientific documents remain authoritative; never run old goal-rewrite.
     base=wf.choose(ws,allow_incomplete_discovery=allow_incomplete_discovery)
     status=base['status']
+    if status in ('NEEDS_DISCOVERY','NEEDS_READABLE_FULLTEXT','NEEDS_ORIGINAL_V44_INGEST','INSUFFICIENT_ELIGIBLE_CORE') and (ws/'source_routing.json').is_file():
+        import multisource_bridge
+        state_file=ws/'output/batch/state.json'
+        reading=BATCH.load_state(ws) if state_file.is_file() else {}
+        if not reading.get('frozen'):
+            known={row['file'] for row in reading.get('papers',[])}
+            local=ws/'input'
+            new=[p for p in local.rglob('*') if p.is_file() and p.suffix.lower() in ('.pdf','.md','.txt','.tex') and p.relative_to(local).as_posix() not in known] if local.exists() else []
+            if new:return {'status':'NEEDS_ORIGINAL_V44_INGEST','new_unindexed_papers':len(new),'next':'Ingest retained authentic full texts before further breadth discovery'}
+            available=multisource_bridge.downloadable_core(ws)
+            if available:
+                return {'status':'NEEDS_AUTHORIZED_CORE_PDF_DOWNLOAD','available_oa_candidates':available,
+                        'next':'Download a bounded admitted-topic candidate batch from authentic multi-source OA locations'}
     if status in ('NEEDS_ORIGINAL_V44_INGEST','NEEDS_READABLE_FULLTEXT','INSUFFICIENT_ELIGIBLE_CORE'):
         eligible=_verified_download_stats(ws)
         sourcepath=ws/'input'
@@ -375,7 +399,7 @@ def next_action(ws:pathlib.Path,*,allow_incomplete_discovery:bool=False)->dict:
         if not local_fulltexts or (status=='NEEDS_READABLE_FULLTEXT' and eligible['core']<BATCH.cfg_at(ws)['core_min']):
             # If v5 picked papers without OA links, this is an honest stop.
             statefile=ws/'output'/'discovery_preflight'/'state.json'
-            selection=store.read(statefile).get('selection',{}) if statefile.is_file() else {}
+            selection=(store.read(statefile).get('selection') or {}) if statefile.is_file() else {}
             choices=selection.get('selected',{}).get('core',[])
             to_get=[x for x in choices if x.get('oa_pdf_url') and x.get('id')]
             if to_get:
@@ -397,7 +421,15 @@ def _read_source_safe(ws:pathlib.Path)->list[dict]:
 
 def quality(ws:pathlib.Path,*,allow_incomplete_discovery:bool=False)->dict:
     ws=ws.expanduser().resolve();rec=contract(ws)
-    hard=[];soft=[];stats={}
+    hard=[];soft=[];stats={};null_route=False
+    if rec.get('route_contract_version',1)>=2:
+        try:
+            import route_convergence
+            route_result,_=route_convergence.committed(ws)
+            stats['route_convergence']=route_result
+            null_route=route_result['status']=='NO_VIABLE_CANDIDATE'
+        except (ValueError,OSError,KeyError,IndexError) as ex:
+            hard.append('Concrete route and method contract: '+str(ex)[:250])
     annual=official_venues.status(ws)
     stats['official_venue_authority']=annual
     if annual.get('should_search'):
@@ -445,9 +477,9 @@ def quality(ws:pathlib.Path,*,allow_incomplete_discovery:bool=False)->dict:
     if not data['sources']:hard.append('Source state and independent reviewer provenance must satisfy the specified quality gate.')
     if not data['claims']:hard.append('Source state and independent reviewer provenance must satisfy the specified quality gate.')
     if not data['questions']:hard.append('Source state and independent reviewer provenance must satisfy the specified quality gate.')
-    if not data['hypotheses']:hard.append('Source state and independent reviewer provenance must satisfy the specified quality gate.')
-    if not data['decisions']:hard.append('Source state and independent reviewer provenance must satisfy the specified quality gate.')
-    if not data['experiments']:hard.append('Source state and independent reviewer provenance must satisfy the specified quality gate.')
+    if not null_route and not data['hypotheses']:hard.append('Source state and independent reviewer provenance must satisfy the specified quality gate.')
+    if not null_route and not data['decisions']:hard.append('Source state and independent reviewer provenance must satisfy the specified quality gate.')
+    if not null_route and not data['experiments']:hard.append('Source state and independent reviewer provenance must satisfy the specified quality gate.')
     for src in data['sources']:
         p=pathlib.Path(src['file_path'])
         if not p.is_file() or store.hashbytes(p.read_bytes())!=src['file_sha']:
@@ -489,7 +521,7 @@ def quality(ws:pathlib.Path,*,allow_incomplete_discovery:bool=False)->dict:
     # We do not allow this system to run experimental code; users own all experiments.
     stats['experiments_executed_by_pipeline']=0
     stats['user_experiment_execution_required']=True
-    return {'status':'FINAL_PLAN_READY_FOR_USER' if not hard else 'BLOCKED_INSUFFICIENT_SCIENTIFIC_EVIDENCE',
+    return {'status':('NO_VIABLE_RESEARCH_METHOD' if null_route else 'FINAL_PLAN_READY_FOR_USER') if not hard else 'BLOCKED_INSUFFICIENT_SCIENTIFIC_EVIDENCE',
             'hard_blockers':hard,'cautions':soft,'stats':stats,
             'non_experimental_scope':True,
             'scientific_limit':'Bibliographic metadata, source-page quote matching and agent judgments are distinct epistemic levels. No unperformed simulation, training or experiment provides scientific measurements; verify figures and prior art independently.'}
@@ -499,7 +531,7 @@ def finalize(ws:pathlib.Path,*,allow_incomplete_discovery:bool=False)->dict:
     ws=ws.expanduser().resolve()
     report=quality(ws,allow_incomplete_discovery=allow_incomplete_discovery)
     store.write(here(ws)/'final_gate.json',report)
-    if report['status']!='FINAL_PLAN_READY_FOR_USER':
+    if report['status'] not in ('FINAL_PLAN_READY_FOR_USER','NO_VIABLE_RESEARCH_METHOD'):
         lines=['Source state and independent reviewer provenance must satisfy the specified quality gate.','','Source state and independent reviewer provenance must satisfy the specified quality gate.','','Source state and independent reviewer provenance must satisfy the specified quality gate.','']
         lines.extend('- '+str(x) for x in report['hard_blockers'])
         if report.get('cautions'):
@@ -511,7 +543,13 @@ def finalize(ws:pathlib.Path,*,allow_incomplete_discovery:bool=False)->dict:
         return {'status':report['status'],'blocking_reasons':report['hard_blockers'],
                 'gate_file':str(here(ws)/'final_gate.json'),
                 'evidence_shortfalls_report':str(notice),'no_false_final_report':True}
+    if contract(ws).get('route_contract_version',1)>=2:
+        import route_convergence
+        route_convergence.render(ws)
     r=ENGINE.report(ws)
+    if report['status']=='NO_VIABLE_RESEARCH_METHOD':
+        return {'status':report['status'],'final_report':str(store.root(ws)/'research_discovery_package/final_route_and_method.md'),
+                'no_experiment_executed':True,'no_viable_method':True,'quality_gate':str(here(ws)/'final_gate.json')}
     venue=venues(ws)
     with store.connect(ws) as db:
         qs=[dict(x) for x in db.execute('SELECT * FROM questions ORDER BY impact*uncertainty DESC')]

@@ -38,3 +38,7 @@ research_cognition_config.json
 *.docx
 *.pptx
 *.xlsx
+
+# Private acquisition policies and research configurations.
+discovery_config.json
+source_routing.json

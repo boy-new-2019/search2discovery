@@ -17,12 +17,12 @@ def hashobj(x:Any)->str:return hashbytes(dump(x).encode('utf-8'))
 def read(p:pathlib.Path)->Any:return json.loads(p.read_text(encoding='utf-8'))
 def write(p:pathlib.Path,x:Any)->None:
     p.parent.mkdir(parents=True,exist_ok=True)
-    with tempfile.NamedTemporaryFile('w',encoding='utf-8',delete=False,dir=str(p.parent),prefix='.rce-tmp') as f:
+    with tempfile.NamedTemporaryFile('w',encoding='utf-8',newline='\n',delete=False,dir=str(p.parent),prefix='.rce-tmp') as f:
         f.write(dump(x)+'\n'); tmp=f.name
     os.replace(tmp,str(p))
 def textwrite(p:pathlib.Path,text:str)->None:
     p.parent.mkdir(parents=True,exist_ok=True)
-    with tempfile.NamedTemporaryFile('w',encoding='utf-8',delete=False,dir=str(p.parent),prefix='.rce-tmp') as f:
+    with tempfile.NamedTemporaryFile('w',encoding='utf-8',newline='\n',delete=False,dir=str(p.parent),prefix='.rce-tmp') as f:
         f.write(text); tmp=f.name
     os.replace(tmp,str(p))
 def norm(t:str)->str:return re.sub(r'\s+',' ',str(t)).strip()

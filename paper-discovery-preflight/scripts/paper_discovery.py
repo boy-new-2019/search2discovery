@@ -496,43 +496,17 @@ def select(ws:pathlib.Path,c:dict,s:dict)->dict:
     return report
 
 
-class OpenAlex:
-    def __init__(self,c:dict):
-        self.cfg=c['api'];self.key=os.environ.get(self.cfg.get('api_key_env','OPENALEX_API_KEY'),'').strip()
-        self.last_request=0.0
-    def query(self,q:str,start:str,end:str,page:int)->tuple[list[dict],dict]:
-        if page>1 and not self.key:raise ValueError('OpenAlex API key is required for pagination beyond the free page limit; obtain a legitimate key or reduce page count.')
-        params={'search':q,'filter':f'from_publication_date:{start},to_publication_date:{end}',
-                'per_page':self.cfg['per_page'],'page':page,
-                'select':'id,doi,display_name,publication_year,publication_date,primary_location,best_oa_location,open_access,cited_by_count,type,abstract_inverted_index,authorships'}
-        if self.key:params['api_key']=self.key
-        url='https://api.openalex.org/works?'+urllib.parse.urlencode(params)
-        wait=max(0.0,self.cfg['minimum_request_interval_seconds']-(time.monotonic()-self.last_request))
-        if wait:time.sleep(wait)
-        request=urllib.request.Request(url,headers={'User-Agent':'BatchPaperDiscovery/1.0 (research metadata discovery; no AI requests)'})
-        for attempt in range(self.cfg['retry_429']+1):
-            try:
-                self.last_request=time.monotonic()
-                with urllib.request.urlopen(request,timeout=self.cfg['timeout_seconds']) as r:
-                    obj=json.load(r)
-                    if not isinstance(obj,dict) or not isinstance(obj.get('results'),list):raise ValueError('Source path, lawful access or network permission check failed at paper_discovery.query (check 518). Do not bypass paywalls or source integrity checks.')
-                    return obj['results'], {'result_count':(obj.get('meta') or {}).get('count'),
-                                            'rate_remaining':r.headers.get('X-RateLimit-Remaining'),'page':page}
-            except urllib.error.HTTPError as exc:
-                if exc.code==429 and attempt<self.cfg['retry_429']:
-                    time.sleep(min(8,2**attempt));continue
-                raise RuntimeError('Source path, lawful access or network permission check failed at paper_discovery.query (check 524). Do not bypass paywalls or source integrity checks.') from exc
-            except (urllib.error.URLError,TimeoutError,OSError,ValueError) as exc:
-                if attempt<1:
-                    time.sleep(.5);continue
-                raise RuntimeError('Input, evidence or workflow invariant failed at paper_discovery.query (check 528); inspect the signed task record and original source.'+type(exc).__name__+'Input, evidence or workflow invariant failed at paper_discovery.query (check 528); inspect the signed task record and original source.') from exc
-        raise RuntimeError('Input, evidence or workflow invariant failed at paper_discovery.query (check 529); inspect the signed task record and original source.')
+from openalex_http import OpenAlex, OpenAlexPause
 
 
 def run(ws:pathlib.Path,*,online:bool,request_limit:int|None=None,fetcher:Any=None)->dict:
+    from literature_sources.coordinator import enabled,Coordinator
+    if fetcher is None and enabled(ws):
+        bound=request_limit if request_limit is not None else 12
+        return Coordinator(ws,online=online,request_limit=bound).run(max_steps=min(100,bound*3))
     if not online:raise ValueError('Source path, lawful access or network permission check failed at paper_discovery.run (check 533). Do not bypass paywalls or source integrity checks.')
     c=config(ws);s=state_at(ws,c)
-    if fetcher is None:fetcher=OpenAlex(c)
+    if fetcher is None:fetcher=OpenAlex(c,workspace=ws)
     haskey=bool(getattr(fetcher,'key',False))
     limit=min(c['api']['max_queries_per_run'],request_limit if request_limit is not None else c['api']['max_queries_per_run'])
     if limit<1:raise ValueError('--max-requests must>=1')
@@ -566,7 +540,8 @@ def run(ws:pathlib.Path,*,online:bool,request_limit:int|None=None,fetcher:Any=No
                     raws,meta=fetcher.query(q,start,end,page)
                 except Exception as exc:
                     s['attempt_log'].append({'status':'REQUEST_ERROR','task':taskkey,'band':band,'category':cat,'query':q,
-                                             'at':now(),'reason':str(exc)[:200]})
+                                             'at':now(),'reason':str(exc)[:200],
+                                             'http_checkpoint':getattr(exc,'info',None)})
                     write(root_out(ws)/'state.json',s)
                     raise
                 count_new=0
@@ -716,6 +691,8 @@ def export(ws:pathlib.Path,c:dict,s:dict)->dict:
 
 
 def status(ws:pathlib.Path)->dict:
+    from literature_sources.coordinator import enabled,Coordinator
+    if enabled(ws):return Coordinator(ws).status()
     c=config(ws);s=state_at(ws,c)
     out=export(ws,c,s)
     out['api_requests']=s['api_calls'];out['fulltexts_downloaded']=sum(x.get('status')=='FULLTEXT_READY' for x in s['download_log'].values())
@@ -791,6 +768,10 @@ def download_pdf(url:str,dst:pathlib.Path,maxmb:int,minchars:int):
 
 
 def obtain_fulltexts(ws:pathlib.Path,*,online:bool,category:str,limit:int|None=None,download_fn=None)->dict:
+    from literature_sources.coordinator import enabled
+    if download_fn is None and enabled(ws):
+        from literature_sources.downloader import obtain
+        return obtain(ws,online=online,category=category,limit=limit or 3)
     if not online:raise ValueError('Source path, lawful access or network permission check failed at paper_discovery.obtain_fulltexts (check 780). Do not bypass paywalls or source integrity checks.')
     if category not in CATEGORIES:raise ValueError('Source path, lawful access or network permission check failed at paper_discovery.obtain_fulltexts (check 781). Do not bypass paywalls or source integrity checks.')
     c=config(ws);s=state_at(ws,c)

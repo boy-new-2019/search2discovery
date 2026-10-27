@@ -74,9 +74,10 @@ def _readable(ws:pathlib.Path)->bool:
 def _v5_fingerprint(ws:pathlib.Path)->str:
     root=ws/'output'/'discovery_preflight'
     paths=[root/'paper_library.json',root/'state.json']
+    if (ws/'source_routing.json').is_file():paths.append(root/'multisource/catalog.json')
     available=[p for p in paths if p.is_file()]
     if not available:return ''
-    return store.hashobj({p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in available})
+    return store.hashobj({str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in available})
 
 
 def sync_discovery(ws:pathlib.Path,*,force:bool=False)->dict:
@@ -119,6 +120,12 @@ def sync_discovery(ws:pathlib.Path,*,force:bool=False)->dict:
                     c.execute('UPDATE works SET category=? WHERE work_id=?',(category,wid))
                     promoted.append({'work_id':wid,'category':category})
             if promoted:store.event(c,'QUESTION_BIBLIOGRAPHY_RECLASSIFIED_FROM_V5',{'works':promoted})
+    multisource={}
+    if (ws/'source_routing.json').is_file():
+        from literature_sources.coordinator import Coordinator
+        acquisition=Coordinator(ws);acquisition.seed()
+        import multisource_bridge
+        multisource=multisource_bridge.sync(ws)
     result=store.import_catalogue(ws)
     files=store.import_v5_downloads(ws)
     if files.get('status')=='PARTIAL':
@@ -127,7 +134,7 @@ def sync_discovery(ws:pathlib.Path,*,force:bool=False)->dict:
     state['last_v5_fingerprint']=signature
     state['last_v5_categories']=category_map
     state['last_v5_report']={'at':store.utc(),'imported_bibliography':result.get('new_bibliographic_works',0),
-                             'source_imported':files.get('imported',0),'question_promoted_to_v5':len(promoted)}
+                             'source_imported':files.get('imported',0),'question_promoted_to_v5':len(promoted),'multisource':multisource}
     store.write(_where(ws),state)
     _event(ws,'DISCOVERY_METADATA_AND_AUTHENTIC_OA_SYNC',state['last_v5_report'])
     return {'status':'V5_CATALOGUE_AND_SOURCE_SYNCED',**state['last_v5_report'],
@@ -266,14 +273,32 @@ def choose(ws:pathlib.Path,*,allow_incomplete_discovery:bool=False)->dict:
     if signature and signature!=_state(ws).get('last_v5_fingerprint'):
         return {'status':'NEEDS_V5_EVIDENCE_SYNC',
                 'next':'Run research_suite.py auto-sync --workspace <path> to register only authentic v5 metadata/full text'}
-    pending=_new_question_papers_after_freeze(ws)
-    if pending:
-        return {'status':'NEEDS_SEPARATE_READING_CAMPAIGN','papers':pending[:10],
-                'total_new_fulltext_papers':len(pending),
-                'next':'Source state and independent reviewer provenance must satisfy the specified quality gate.'}
-    research=_question_next(ws)
-    if research and research['status'] in ('NEEDS_QUESTION_DRIVEN_SEARCH','NEEDS_QUESTION_QUERY_REVIEW'):return research
-    step=suite.next_action(ws,allow_incomplete_discovery=allow_incomplete_discovery)
+    import evidence_gain_scheduler as gain_scheduler
+    # Preserve the established ordering for empty/non-ready reader campaigns:
+    # discovery.status itself can change local acquisition fingerprints.
+    step = (suite.next_action(ws,allow_incomplete_discovery=allow_incomplete_discovery)
+            if gain_scheduler.ready_reader_checkpoint(suite.original_batch, ws) else None)
+    # Preserve integrity/sync checks above. Ready original-source reading has
+    # priority over optional new leads; acquisition is not certified complete.
+    reader_priority = step is not None and step['status'] in ('READY_TO_SEAL_ORIGINAL_V44', 'READ_ORIGINAL_V44_CORE')
+    research = None
+    if not reader_priority:
+        pending=_new_question_papers_after_freeze(ws)
+        if pending:
+            return {'status':'NEEDS_SEPARATE_READING_CAMPAIGN','papers':pending[:10],
+                    'total_new_fulltext_papers':len(pending),
+                    'next':'Source state and independent reviewer provenance must satisfy the specified quality gate.'}
+        research=_question_next(ws)
+        if research and research['status'] in ('NEEDS_QUESTION_DRIVEN_SEARCH','NEEDS_QUESTION_QUERY_REVIEW'):
+            import evidence_gain_scheduler as gain_scheduler
+            pause=gain_scheduler.automatic_search_pause(ws)
+            if pause:
+                return {'status':'PAUSED_FOR_EVIDENCE_STRATEGY_REVIEW',
+                        'evidence_gain_policy':pause, 'pending_action':research,
+                        'next':'Triage paused gap strategies before more automatic question searches; do not alter quota or reviewer gates'}
+            return research
+    if step is None:
+        step=suite.next_action(ws,allow_incomplete_discovery=allow_incomplete_discovery)
     if step['status']=='READY_FOR_RCE_CYCLE':
         import round_intelligence as rounds
         decision=rounds.next_decision(ws)

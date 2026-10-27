@@ -10,16 +10,23 @@ permissions:
 
 jobs:
   unit-tests:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.11', '3.12']
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ matrix.python }}
       - name: Install PDF readers for test coverage
         # PyMuPDF is an optional AGPL/commercial component used only for PDF fixture/render tests.
         run: python -m pip install 'pypdf>=4' 'PyMuPDF>=1.23'
+      - name: Compile all supported Python sources
+        run: python -m compileall -q batch-paper-deepread-desktop paper-discovery-preflight research-cognition-engine search2discovery tests install_v6.py
       - name: v4.4 reading workflow
         run: python -m unittest discover -s batch-paper-deepread-desktop/tests -q
       - name: v5 discovery

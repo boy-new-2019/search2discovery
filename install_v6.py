@@ -44,27 +44,21 @@ def _same(a: pathlib.Path, b: pathlib.Path) -> bool:
 
 
 def _check_bundle() -> list[tuple[pathlib.Path, pathlib.Path]]:
-    # Fail closed if any of the 35 versioned v4.4 engine files differs from
-    # the v6.6 English-policy release manifest. Historical hashes are audited
-    # separately; translated prompts cannot be byte-identical to v4.4.
-    origin = ROOT / 'research-cognition-engine' / 'references' / 'original_v44_file_manifest.json'
-    if not origin.is_file():
-        raise ValueError('Missing original v4.4 source provenance manifest')
-    manifest = json.loads(origin.read_text(encoding='utf-8'))
-    expected = manifest.get('skill_files_sha256', {})
-    if len(expected) != 35:
-        raise ValueError('v4.4 adapted manifest file count mismatch')
-    for rel, digest in expected.items():
-        file = ROOT / 'batch-paper-deepread-desktop' / rel
-        if not file.is_file() or hashlib.sha256(file.read_bytes()).hexdigest() != digest:
-            raise ValueError('v6.6 English-adapted v4.4 file missing or modified: ' + rel)
+    import importlib.util
+    helper = ROOT / 'research-cognition-engine/scripts/release_integrity.py'
+    spec = importlib.util.spec_from_file_location('s2d_release_integrity', helper)
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    audit = module.verify(ROOT)
+    if audit['missing'] or audit['modified']:
+        raise ValueError('Release source missing or modified: ' + str(audit))
     sources = []
     for name in SKILLS:
         source = ROOT / name
         if not (source / "SKILL.md").is_file():
             raise ValueError("Missing Skill entry in full bundle: " + name)
         sources.append((source, pathlib.Path(".agents") / "skills" / name))
-    agents = ROOT / ".codex" / "agents"
+    agents = (ROOT / ".codex" / "agents" if (ROOT / ".codex" / "agents").is_dir()
+              else ROOT / "search2discovery" / "resources" / "agents")
     all_names = []
     for prefix, count in EXPECTED_AGENTS.items():
         matching = sorted(agents.glob(prefix + "*.toml"))

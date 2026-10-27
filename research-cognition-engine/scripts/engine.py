@@ -58,6 +58,9 @@ def new_cycle(ws:pathlib.Path, cfg:dict)->dict:
     entry={'id':cid,'stage':'MAP','completed_stages':[], 'started_at':store.utc(),
            'contract_sha256':s['macro_goal_sha256'],'cfg_sha256':store.hashobj({k:v for k,v in cfg.items() if k!='ranking'}),
            'source_count_when_started':n}
+    topic_contract=store.root(ws)/'topic_to_plan/contract.json'
+    if topic_contract.is_file() and store.read(topic_contract).get('route_contract_version',1)>=2:
+        entry['route_contract_version']=2
     s['cycles'].append(entry);store.write(statefile(ws),s)
     return entry
 
@@ -90,9 +93,10 @@ def _context(ws:pathlib.Path,kind:str,cfg:dict)->dict:
     if kind in ('HYPOTHESIS','CONTRADICTION','EXPERIMENT','NOVELTY','FINAL') and not claims:
         raise ValueError('NO_CLAIMS: read and import real full-text evidence before scientific inference')
     if kind=='HYPOTHESIS' and not questions:raise ValueError('NO_QUESTIONS: stage MAP must define research questions first')
-    if kind in ('NOVELTY','EXPERIMENT','FINAL') and not hypotheses:
+    null_final=kind=='FINAL' and bool(get_state(ws)['cycles'][-1].get('stop_reason'))
+    if kind in ('NOVELTY','EXPERIMENT','FINAL') and not hypotheses and not null_final:
         raise ValueError('NO_HYPOTHESES: no research hypotheses exist for independent review')
-    if kind=='FINAL' and not has_experiment_plan:
+    if kind=='FINAL' and not has_experiment_plan and not null_final:
         raise ValueError('NO_EXPERIMENT_PLANS: cannot produce final method recommendations')
     # Bounds enforced before writing prompts. Important to not feed unbounded 250-paper content.
     context={'works':works if kind=='MAP' else works[:20], 'sources':sources if kind in ('MECHANISM','CONTRADICTION','HYPOTHESIS') else [],
@@ -109,6 +113,7 @@ def _context(ws:pathlib.Path,kind:str,cfg:dict)->dict:
             context['prior_art_search_coverage']=prior_art.coverage(ws)
         except (ImportError,sqlite3.OperationalError):
             context['hypothesis_prior_art_metadata_only']=[]
+    if kind=='FINAL':context['terminal_disposition_reason']=get_state(ws)['cycles'][-1].get('stop_reason','')
     return context
 
 def _instructions(kind:str,role:str)->str:
@@ -151,6 +156,9 @@ def _instructions(kind:str,role:str)->str:
             'Empty contradictions are valid when no real conflict is supported.'),
         'HYPOTHESIS': (
             'Form at most three materially distinct falsifiable hypotheses with grounded prior papers. '
+            'Compare state variables, update operators, information access, objectives and supervision against the closest methods and the user existing work. '
+            'Reject renaming, simple replay/compression/distillation combinations or benchmark changes without a substantive mechanism difference. '
+            'A scientific protocol gap is a question to reason about, not a source-admission veto. '
             'Return {"stage":"HYPOTHESIS","hypotheses":[{"question_id":"Q-...",'
             '"statement":"testable research hypothesis","mechanism":"causal or algorithmic mechanism",'
             '"prediction":"observable future prediction","falsifier":"specific rejecting observation",'
@@ -188,6 +196,9 @@ def _instructions(kind:str,role:str)->str:
             '"review_note":"user approval and frozen-core boundary"}]}. '
             'All method recommendations remain PENDING_USER_APPROVAL; no tests or experiments executed.'),
     }
+    if kind=='FINAL':
+        import route_convergence
+        base += '\n'+route_convergence.instructions()
     return base + '\n' + examples[kind] + '\nRole: ' + role + '.'
 
 
@@ -197,9 +208,10 @@ def task_spec(ws:pathlib.Path,cfg:dict)->tuple[dict,dict]:
     cycle=s['cycles'][-1]
     job_id=cycle['id']+'_'+st
     context=_context(ws,st,cfg)
-    return {'job_id':job_id,'cycle_id':cycle['id'],'stage':st,'roles':cfg['native_roles'][st],
-            'macro_goal_sha256':s['macro_goal_sha256']},context
-
+    task={'job_id':job_id,'cycle_id':cycle['id'],'stage':st,'roles':cfg['native_roles'][st],
+          'macro_goal_sha256':s['macro_goal_sha256']}
+    if cycle.get('route_contract_version',1)>=2:task['route_contract_version']=2
+    return task,context
 def prepare(ws:pathlib.Path,cfg:dict,allocator)->dict:
     manifest,context=task_spec(ws,cfg)
     if not manifest:return {'status':'COMPLETE'}
@@ -312,8 +324,17 @@ def check_output(ws:pathlib.Path,manifest:dict,role:str,result:dict)->dict:
             raise ValueError('No credible research recommendation requires a specific reason')
         for x in rows:
             if x.get('hypothesis_id') not in hypotheses:raise ValueError('Unknown final hypothesis')
+            with store.connect(ws) as db:
+                bad=db.execute("SELECT 1 FROM assessments WHERE hypothesis_id=? AND verdict IN ('KNOWN','REJECT')",(x['hypothesis_id'],)).fetchone()
+            if bad:raise ValueError('Prior-art rejection blocks final recommendation')
             for f,m in [('recommendation',20),('risks',20),('review_note',20)]:_ensure_len(x,f,m)
             if x.get('confidence') not in ('low','medium','high'):raise ValueError('Invalid confidence')
+        strict=manifest.get('route_contract_version',1)>=2
+        if strict or 'route_selection' in result:
+            import route_convergence
+            checked=route_convergence.validate(ws,result['route_selection'])
+            if checked['selected'] and checked['selected'] not in {x['hypothesis_id'] for x in rows}:raise ValueError('Route must be among final recommendations')
+            if not checked['selected'] and rows:raise ValueError('No-viable route cannot contain recommendations')
     return {'validated_source_anchors':anchors,'key':key,'records':len(rows),'structurally_valid':True,
             'semantic_truth_independently_verified':False}
 
@@ -324,9 +345,6 @@ def cfg_max_hypotheses(ws:pathlib.Path)->int:
 
 def collect(ws:pathlib.Path,job_id:str,role:str,file:pathlib.Path,thread_ref:str)->dict:
     folder=taskdir(ws,job_id);manifest=store.read(folder/'manifest.json')
-    s,stage_now=stage(ws)
-    if manifest['stage']!=stage_now or manifest['cycle_id']!=s['cycles'][-1]['id']:
-        raise ValueError('Stale task, cannot replace a newer research decision')
     if role not in manifest['roles']:raise ValueError('Subagent role not requested')
     if not thread_ref or len(thread_ref.strip())<5:raise ValueError('Independent Codex Desktop thread reference required')
     f=file.resolve()
@@ -335,15 +353,22 @@ def collect(ws:pathlib.Path,job_id:str,role:str,file:pathlib.Path,thread_ref:str
     receipt=check_output(ws,manifest,role,result)
     existing=list((folder/'receipts').glob('*.json')) if (folder/'receipts').exists() else []
     ans=folder/'answers'/(role+'.json')
-    if ans.exists():
-        if store.hashobj(store.read(ans))!=store.hashobj(result):
-            raise ValueError('Existing specialist report must not be rewritten')
-        prior=store.read(folder/'receipts'/(role+'.json'))
+    receipt_path=folder/'receipts'/(role+'.json')
+    if ans.exists() and store.hashobj(store.read(ans))!=store.hashobj(result):
+        raise ValueError('Existing specialist report must not be rewritten')
+    if receipt_path.exists():
+        if not ans.is_file():raise ValueError('Collected answer is missing')
+        prior=store.read(receipt_path)
         if prior['thread_ref']!=thread_ref:raise ValueError('Same role cannot silently change the independent thread identity')
+        if prior['answer_sha256']!=store.hashbytes(ans.read_bytes()) or prior['prompt_sha256']!=manifest['prompt_shas'][role]:
+            raise ValueError('Collected answer or prompt integrity mismatch')
         return {'status':'ALREADY_COLLECTED','role':role}
+    s,stage_now=stage(ws)
+    if manifest['stage']!=stage_now or manifest['cycle_id']!=s['cycles'][-1]['id']:
+        raise ValueError('Stale task, cannot replace a newer research decision')
     if any(store.read(x).get('thread_ref')==thread_ref for x in existing):
         raise ValueError('Two independently mandated roles cannot reuse the same thread')
-    store.write(ans,result)
+    if not ans.exists():store.write(ans,result)
     store.write(folder/'receipts'/(role+'.json'),
                 {'role':role,'thread_ref':thread_ref,'answer_sha256':store.hashbytes(ans.read_bytes()),
                  'prompt_sha256':manifest['prompt_shas'][role],
@@ -353,12 +378,19 @@ def collect(ws:pathlib.Path,job_id:str,role:str,file:pathlib.Path,thread_ref:str
 
 
 def _get_member_results(ws:pathlib.Path,manifest:dict)->dict[str,dict]:
-    folder=taskdir(ws,manifest['job_id']);results={}
+    folder=taskdir(ws,manifest['job_id']);results={};seen_threads=set()
     for role in manifest['roles']:
         a=folder/'answers'/(role+'.json');r=folder/'receipts'/(role+'.json')
         if not a.is_file() or not r.is_file():raise ValueError('Member still missing '+role)
         rec=store.read(r)
         if rec['answer_sha256']!=store.hashbytes(a.read_bytes()):raise ValueError('Tampered member output '+role)
+        if rec.get('prompt_sha256')!=manifest['prompt_shas'][role]:raise ValueError('Tampered member prompt receipt '+role)
+        prompt=taskdir(ws,manifest['job_id'])/'prompts'/(role+'.md')
+        # Legacy Windows writers translated LF to CRLF after hashing prompt text.
+        # Accept only the exact signed UTF-8 text (including all non-newline content).
+        if not prompt.is_file() or store.hashbytes(prompt.read_text(encoding='utf8').encode('utf8'))!=manifest['prompt_shas'][role]:raise ValueError('Tampered original prompt '+role)
+        if not rec.get('thread_ref') or rec['thread_ref'] in seen_threads:raise ValueError('Independent thread identities must be distinct')
+        seen_threads.add(rec['thread_ref'])
         data=store.read(a);check_output(ws,manifest,role,data)
         results[role]=data
     return results
@@ -428,7 +460,12 @@ def _apply(ws:pathlib.Path,manifest:dict,results:dict[str,dict])->dict:
 def commit(ws:pathlib.Path,job_id:str)->dict:
     folder=taskdir(ws,job_id)
     receipt=folder/'commit.json'
-    if receipt.exists():return store.read(receipt)
+    if receipt.exists():
+        saved=store.read(receipt);manifest=store.read(folder/'manifest.json')
+        results=_get_member_results(ws,manifest)
+        current=store.hashobj({r:store.hashobj(o) for r,o in results.items()})
+        if saved.get('source_sha256')!=current:raise ValueError('Committed source integrity mismatch')
+        return saved
     manifest=store.read(folder/'manifest.json')
     get_state(ws)
     results=_get_member_results(ws,manifest)
@@ -447,12 +484,15 @@ def commit(ws:pathlib.Path,job_id:str)->dict:
         raise RuntimeError('Concurrent cycle changed. Investigate persistent events before resuming')
     cur=manifest['stage'];idx=STAGES.index(cur)
     st['cycles'][-1]['completed_stages'].append(cur)
+    strict=st['cycles'][-1].get('route_contract_version',1)>=2
     if (cur=='HYPOTHESIS' and not any(x['hypotheses'] for x in results.values())):
-        st['cycles'][-1]['stage']='COMPLETE'
+        st['cycles'][-1]['stage']='FINAL' if strict else 'COMPLETE'
         st['cycles'][-1]['stop_reason']='NO_SUPPORTED_HYPOTHESIS'
     elif (cur=='EXPERIMENT' and not any(x['plans'] for x in results.values())):
-        st['cycles'][-1]['stage']='COMPLETE'
+        st['cycles'][-1]['stage']='FINAL' if strict else 'COMPLETE'
         st['cycles'][-1]['stop_reason']='NO_FEASIBLE_EXPERIMENT'
+    elif cur=='NOVELTY' and strict and all(x['novelty_status']=='REJECTED_BY_PRIOR_ART' for x in store.listrows(ws,'hypotheses')):
+        st['cycles'][-1]['stage']='FINAL';st['cycles'][-1]['stop_reason']='ALL_CANDIDATES_REJECTED_BY_PRIOR_ART'
     else:
         st['cycles'][-1]['stage']=STAGES[idx+1] if idx+1<len(STAGES) else 'COMPLETE'
     store.write(statefile(ws),st)

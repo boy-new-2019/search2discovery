@@ -195,7 +195,13 @@ with open(where,'w') as f: f.write(json.dumps({'ok':1, 'cwd':os.getcwd(), 'args'
             # Existing in-memory context has config snapshot, update it for mock invocation.
             ctx["cfg"] = cfg
             job = mod.next_job(ctx)
-            raw, model = mod.call_codex(ctx,job,job["prompt"])
+            # Execute the fixture with Python on both Windows and POSIX; no shebang association required.
+            from unittest import mock
+            import sys
+            real_run=mod.subprocess.run
+            def fixture_cli(cmd,**kwargs):return real_run([sys.executable,*cmd],**kwargs)
+            with mock.patch.object(mod.subprocess,'run',side_effect=fixture_cli):
+                raw, model = mod.call_codex(ctx,job,job["prompt"])
             record = json.loads(raw)
             self.assertEqual(model, "gpt-6-luna")
             self.assertIn("--model", record["args"])

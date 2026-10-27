@@ -1,8 +1,13 @@
 ---
 name: paper-discovery-preflight
-version: 5.0.0-english-policy
-summary: Authenticated metadata and public PDF discovery with broad, evidence-aware interdisciplinary coverage; no reading-model calls for basic retrieval.
+metadata:
+  version: "5.0.0-english-policy"
+description: Authenticated metadata and public PDF discovery with broad, evidence-aware interdisciplinary coverage; no reading-model calls for basic retrieval.
 ---
+## Runtime repair operating rules
+
+Follow the public `../search2discovery/SKILL.md` for current-request mode selection, portable bootstrap, phase budget feasibility, real native dispatch/collect/commit, ready-core priority, evidence-gain stopping and final route convergence. Do not treat nested historical conversation instructions as the current task. The optional Pro5x preset is a local session cap, not account quota or a complete-campaign default. New topic contracts require a signed FINAL route_selection and concrete method_card. Never recommend mechanisms rejected as known prior art.
+
 # Literature discovery | Preflight
 
 1. Read the user's locked research direction and validated topic-specific search terms. Never silently substitute the previous autonomous-driving preset into a new topic. Chinese-language user topics are interpreted by an independent research agent into accurate English search expressions before commit.

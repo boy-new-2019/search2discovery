@@ -7,6 +7,7 @@ Reserving *before* dispatch prevents the v4.3 receipt-only overrun failure.
 """
 from __future__ import annotations
 import contextlib
+import hashlib
 import json
 import os
 import pathlib
@@ -80,7 +81,7 @@ def _locked(ws:pathlib.Path):
     for _ in range(80):
         try:
             lock.mkdir();held=True;break
-        except FileExistsError:time.sleep(.05)
+        except (FileExistsError,PermissionError):time.sleep(.05)
     if not held:
         raise RuntimeError('Input, evidence or workflow invariant failed at quota_guard._locked (check 85); inspect the signed task record and original source.')
     try:yield
@@ -127,6 +128,111 @@ def reserve(ws:pathlib.Path,conf:dict,requests:dict[str,int])->dict:
         if new:core.jwrite(path(ws),d)
     return status(ws,conf)
 
+
+def prompt_measure(prompt:pathlib.Path,base_prompt:pathlib.Path|None=None)->dict:
+    """Count Unicode code points; include separately referenced base material."""
+    raw=prompt.read_bytes();text=prompt.read_text(encoding='utf-8')
+    result={'prompt_chars':len(text),'prompt_utf8_bytes':len(raw),
+            'prompt_sha256':hashlib.sha256(raw).hexdigest(),
+            'count_unit':'UNICODE_CODEPOINTS_UNIVERSAL_NEWLINES_V1'}
+    if base_prompt and base_prompt.is_file():
+        base=base_prompt.read_text('utf-8')
+        result['base_prompt_sha256']=hashlib.sha256(base_prompt.read_bytes()).hexdigest()
+        result['base_prompt_included_inline']=base in text
+        if base not in text:
+            result['prompt_chars']+=len(base)
+            result['prompt_utf8_bytes']+=base_prompt.stat().st_size
+    return result
+
+def _receipt_bound_prompt(ws:pathlib.Path,key:str,prompt:pathlib.Path,receipt:pathlib.Path)->pathlib.Path:
+    if not receipt.exists():return prompt
+    expected=core.jread(receipt).get('prompt_sha256')
+    if not expected or hashlib.sha256(prompt.read_bytes()).hexdigest()==expected:return prompt
+    jid,kind,role=key.split(':')
+    root=ws/'output/native/tasks'/jid
+    recovered=root/'recovered_prompts'/(role+'.'+expected+'.md')
+    if recovered.exists():
+        if hashlib.sha256(recovered.read_bytes()).hexdigest()!=expected:
+            raise ValueError('Recovered prompt integrity mismatch')
+        return recovered
+    # Repair one known pre-fix prepare() overwrite, using an exact retained hash.
+    if kind=='reader' and role=='bpd_skeptic_sol':
+        base=root/'base_prompt.md'
+        if base.exists():
+            candidate=('Research evidence and workflow notes (desktop_bridge._request_second). Use original source evidence; keep frozen constraints and independent quality gates.'
+                       +base.read_text('utf-8'))
+            raw=candidate.encode('utf-8')
+            if hashlib.sha256(raw).hexdigest()==expected:
+                recovered.parent.mkdir(parents=True,exist_ok=True)
+                with recovered.open('xb') as f:f.write(raw)
+                core.jwrite(recovered.with_suffix('.recovery.json'),{
+                    'status':'RECONSTRUCTED_EXACT_RETAINED_RECEIPT_HASH',
+                    'receipt_sha256':hashlib.sha256(receipt.read_bytes()).hexdigest(),
+                    'existing_prompt_preserved_sha256':hashlib.sha256(prompt.read_bytes()).hexdigest(),
+                    'recovered_prompt_sha256':expected,'scientific_answer_modified':False})
+                return recovered
+    raise ValueError('Retained receipt/prompt hash mismatch; no exact recovery available')
+
+
+def reserve_prompt(ws:pathlib.Path,conf:dict,key:str,prompt:pathlib.Path)->dict:
+    """Bind a reservation to its exact prompt; retain historical over-reserves.
+
+    This is a monotone migration, not an allowance refund. Unknown legacy
+    reservations are reconciled against the retained task prompt and, when
+    present, its pre-existing reviewer receipt. Every update remains capped.
+    """
+    validate(conf)
+    if not isinstance(key,str) or len(key)>260 or len(key.split(':'))!=3:
+        raise ValueError('Invalid prompt reservation key')
+    jid,kind,role=key.split(':')
+    if kind not in ('reader','captain') or not all(re.fullmatch(r'[A-Za-z0-9_-]+',v) for v in (jid,role)):
+        raise ValueError('Invalid task/role in prompt reservation')
+    expected=ws/'output/native/tasks'/jid/('captain_prompt.md' if kind=='captain' else 'prompts/'+role+'.md')
+    if prompt.resolve()!=expected.resolve() or not prompt.is_file():
+        raise ValueError('Prompt path does not match the reservation identity')
+    receipt=prompt.parent.parent/'receipts'/(role+'.json') if kind=='reader' else prompt.parent/'captain_receipt.json'
+    bound=_receipt_bound_prompt(ws,key,prompt,receipt)
+    m=prompt_measure(bound,expected.parent.parent/'base_prompt.md' if kind=='reader' else None)
+    m['prompt_file']=bound.relative_to(ws).as_posix()
+    with _locked(ws):
+        d=_load(ws);active=d['cycles'][d['active_cycle']]
+        found=[(name,c,c['reservations'][key]) for name,c in d['cycles'].items() if key in c['reservations']]
+        if len(found)>1:raise ValueError('Duplicate reservation identity across cycles requires explicit audit')
+        if found:
+            name,cycle,row=found[0];old=row['reserved_prompt_chars']
+            if type(old) is not int or old<0:raise ValueError('Invalid historical reservation')
+            if row.get('prompt_sha256') and row['prompt_sha256']!=m['prompt_sha256']:
+                raise ValueError('Immutable reservation prompt hash mismatch')
+            new=max(old,m['prompt_chars'])
+            if name!=d['active_cycle'] and new>old:
+                raise QuotaExceeded('Archived reservation cannot silently gain new spending capacity')
+            if sum(r['reserved_prompt_chars'] for r in cycle['reservations'].values())-old+new>conf['max_prompt_chars_per_cycle']:
+                raise QuotaExceeded('Prompt reconciliation exceeds the retained cycle cap')
+            if len(cycle['reservations'])>conf['max_assignments_per_cycle']:
+                raise QuotaExceeded('Existing cycle exceeds configured assignment cap')
+            if row.get('count_unit'):
+                if row.get('base_prompt_sha256')!=m.get('base_prompt_sha256'):
+                    raise ValueError('Immutable base prompt dependency mismatch')
+                if row['count_unit']!=m['count_unit']:raise ValueError('Unknown prompt count unit')
+                if row.get('prompt_chars')!=m['prompt_chars']:raise ValueError('Immutable prompt count mismatch')
+                return status(ws,conf)
+            row['historical_reservation']={'reserved_prompt_chars':old,
+                'unit':'LEGACY_UNSPECIFIED_BYTES_OR_BASE_PROMPT_CHARS',
+                'preserved_without_refund':True,'reconciled_at':core.ts()}
+            row.update(m);row['reserved_prompt_chars']=new
+            row['migration_status']='MONOTONE_SOURCE_BOUND_RECONCILIATION'
+        else:
+            if len(active['reservations'])+1>conf['max_assignments_per_cycle']:
+                raise QuotaExceeded('Assignment ceiling reached before prompt dispatch')
+            total=sum(r['reserved_prompt_chars'] for r in active['reservations'].values())
+            if total+m['prompt_chars']>conf['max_prompt_chars_per_cycle']:
+                raise QuotaExceeded('Prompt character ceiling reached before dispatch')
+            active['reservations'][key]={**m,'reserved_prompt_chars':m['prompt_chars'],
+                'reserved_at':core.ts(),'status':'DISPATCH_RESERVED_NOT_BILLED_USAGE'}
+        core.jwrite(path(ws),d)
+    return status(ws,conf)
+
+
 def renew(ws:pathlib.Path,conf:dict,label:str,*,user_authorized:bool=False)->dict:
     validate(conf)
     if not user_authorized:
@@ -152,6 +258,8 @@ def has_reservation(ws:pathlib.Path,key:str)->bool:
 
 def ensure_existing_or_expand(ws:pathlib.Path,conf:dict,key:str,new_size:int)->dict:
     validate(conf)
+    if not isinstance(key,str) or len(key)>260 or type(new_size) is not int or new_size<0:
+        raise ValueError('Invalid reservation expansion request')
     with _locked(ws):
         d=_load(ws)
         for cycle in d['cycles'].values():
@@ -166,6 +274,8 @@ def ensure_existing_or_expand(ws:pathlib.Path,conf:dict,key:str,new_size:int)->d
                         raise QuotaExceeded('Local assignment budget or reserved quota check failed at quota_guard.ensure_existing_or_expand (check 168). Save the checkpoint before resuming.')
                     cycle['reservations'][key]['reserved_prompt_chars']=new_size
                     core.jwrite(path(ws),d)
+                else:
+                    raise QuotaExceeded('Cannot expand an archived reservation without an audited cycle decision')
                 return status(ws,conf)
     # unreserved old task is not free: first request a fresh slot explicitly
     return reserve(ws,conf,{key:new_size})
@@ -198,7 +308,7 @@ def plan(ws:pathlib.Path,conf:dict)->dict:
     stages_completed=sum(1 for g in state['groups'] for stage in ('S1','S2')
                          if batch.screen_path(ws,batch.stage_jid(stage,g),'receipts').is_file())
     remaining_screen=max(0,existing_screen-stages_completed*native_s1)
-    chosen=state.get('selection',{}).get('last_selected',[])
+    chosen=(state.get('selection') or {}).get('last_selected',[])
     core_count=len(chosen) if chosen else min(selection['core_target'],len(all_ready))
     def pages_size(p):
         try:

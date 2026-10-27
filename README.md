@@ -14,6 +14,39 @@
 
 它**不会**运行训练、实验、数值模拟、GPU 作业或方法测试，也不保证研究新颖性、科学结论正确性、期刊排名、模型可用性或付费 Codex 代理能够自主运行。
 
+## 本次运行修正（runtime.2）
+
+从主题出发时，技能会完成文献发现、机制比较、候选筛选与路线收敛；最终应给出**一条首选路线及具体方法**，同时解释被排除的方案。方法说明必须包含模型与数据、信息可用边界、表示与更新算子、目标函数、监督来源、公平基线、资源估计和放弃条件。若没有候选成立，应明确交付有证据的否定结论，不保证凭空产生创新。
+
+- 支持“完整发现”“已有方向细化”“仅比较、不精读”三种范围，按当前请求执行。
+- 新主题启用 arXiv、CVF、PMLR、OpenReview、Crossref、OpenAlex 六源检索；支持缓存、去重、续跑和单源故障后的替代检索。来源可用性与开放全文覆盖仍受各站点限制。
+- OpenAlex 区分每秒限流、每日额度耗尽和不明 429；采用有限退避、服务端等待时间和持久暂停状态。不会轮换密钥绕过限制。
+- 中文、英文和混合提示词统一按 Unicode 字符计预算；历史较大的预留值保留，不重置账本。重复收集或提交已完成任务会校验并复用回执。
+- 满足准入条件的核心文献优先进入精读；未回答的科学问题进入后续推理。对同一缺口连续两批没有有效证据增益时，暂停该检索策略并复查。
+- `campaign-plan` 在扩展筛选前核算各阶段需求。预算是本地派发上限，不能当作账户余额；新建研究推理配置可容纳完整九次专家派发，旧配置不自动增加。
+- Python 3.11 字符串语法已修正；CI 同时测试 Windows / Ubuntu 与 Python 3.11 / 3.12。
+
+### 全局安装后的首次使用
+
+四个技能安装在同一全局技能目录后，公开入口自带项目安装器和 27 份代理配置。它可以在新研究目录中自动自举；也可以运行：
+
+```powershell
+# 按实际 Python 环境调整。此示例使用 conda。
+$python = 'D:\anaconda\python.exe'
+$skills = Join-Path $HOME '.codex/skills'
+& $python (Join-Path $skills 'search2discovery/scripts/bootstrap.py') --project 'D:\ResearchWorkspace'
+```
+
+已有安装需要替换时使用 `--upgrade`；安装器备份代码并阻止覆盖未完成签名任务。然后在研究工作区调用 `$search2discovery`，说明主题、约束与预算。完整研究请求下，主代理应实际派发、等待并收集独立代理结果后继续，不应在每个小批次后只返回命令让用户接手。
+
+```powershell
+$ws = (Get-Location).Path
+$s = Join-Path $ws '.agents/skills/research-cognition-engine/scripts/suite.py'
+& $python $s campaign-plan --workspace $ws
+```
+
+新主题的最终产物新增 `research_discovery_package/route_selection.json` 与 `final_route_and_method.md`。方法字段、独立复核和来源检查由程序校验；科学解释是否正确、新颖性是否成立仍须结合原文和后续研究验证。
+
 ## 工作流
 
 ```text
@@ -32,7 +65,7 @@
 
 | 组件 | 用途 |
 | --- | --- |
-| `paper-discovery-preflight/` | OpenAlex 元数据、去重、开放获取检索及跨学科发现 |
+| `paper-discovery-preflight/` | 六源学术检索、去重、合法公开全文及跨学科发现 |
 | `batch-paper-deepread-desktop/` | S1/S2 筛选及五轮不同侧重点的全文审读与独立复核 |
 | `research-cognition-engine/` | 研究记忆、研究问题检索、矛盾分析、假设评估、证据感知调度与报告 |
 | `search2discovery/` | 唯一公开 Skill 入口：`$search2discovery` |
@@ -144,6 +177,33 @@ Give the system a research topic. It helps find scholarly literature, retrieve l
 
 > **What it does not do:** It does not run training, experiments, numerical simulations, GPU jobs, or tests of proposed methods. It cannot guarantee paper novelty, scientific correctness, publisher rankings, model availability, or autonomous execution of paid Codex agents.
 
+## Runtime corrections (runtime.2)
+
+Topic-driven campaigns should converge on **one primary research route and a concrete method**, with explicit candidate rejections. The final method card includes the baseline/model, dataset, information boundary, representation, update operator, objective, supervision, evaluation protocol, resource estimate and kill criteria. An evidence-backed no-viable-method conclusion is valid; novelty is never guaranteed.
+
+- Current-request routing distinguishes full discovery, focused refinement and compare-only work without deep reading.
+- New topics enable six-source discovery: arXiv, CVF, PMLR, OpenReview, Crossref and OpenAlex, with cached resumable requests and provider failover. Coverage and lawful full-text availability remain source-dependent.
+- OpenAlex distinguishes rate throttling, daily exhaustion and unknown HTTP 429; bounded backoff and persistent cooldowns preserve progress without key rotation.
+- Unicode character accounting is consistent across preparation and submission. Historical over-reservations remain conservative; duplicate collection/commit revalidates signed receipts.
+- Ready admitted core reading takes priority over optional breadth. Two zero-gain batches against the same evidence gap trigger strategy review.
+- `campaign-plan` exposes phase feasibility before further screening. Local caps do not report account quota. Fresh cognition defaults admit all nine required specialist assignments; existing caps are preserved.
+- CI compiles and runs regression suites on Windows and Ubuntu with Python 3.11 and 3.12.
+
+### Bootstrap from a personal installation
+
+Install all four sibling Skills in the same personal Skill directory. The public Skill bundles its installer and 27 profiles, so a new workspace does not require the original repository checkout:
+
+```powershell
+$python = 'D:\anaconda\python.exe' # Replace with your Python 3.11+ environment.
+$skills = Join-Path $HOME '.codex/skills'
+& $python (Join-Path $skills 'search2discovery/scripts/bootstrap.py') --project 'D:\ResearchWorkspace'
+```
+
+Use `--upgrade` to replace differing installed code with backups; unfinished signed tasks block upgrades. Invoke `$search2discovery` in the project and supply the topic, constraints and budget. During an authorized campaign the lead must dispatch, wait for, collect and commit genuine native threads, then resume. A bounded Python pause is not completion of the research task.
+
+Run `<python> <suite> campaign-plan --workspace <workspace>` before expanding screening. New campaigns require committed `research_discovery_package/route_selection.json` and `final_route_and_method.md`. Structural validation and software tests do not establish scientific truth, originality or experimental gains.
+
+
 ## Workflow
 
 ```text
@@ -180,7 +240,7 @@ Chinese research recommendations and *unexecuted* experiment plans
 
 | Component | Purpose |
 | --- | --- |
-| `paper-discovery-preflight/` | OpenAlex metadata, deduplication, open-access retrieval, broad interdisciplinary discovery |
+| `paper-discovery-preflight/` | Six-source metadata, deduplication, lawful open-access retrieval, broad interdisciplinary discovery |
 | `batch-paper-deepread-desktop/` | S1/S2 screening and five different full-text reading rounds with independent review |
 | `research-cognition-engine/` | Research memory, research-question search, contradictions, hypothesis assessment, evidence-aware scheduling and reports |
 | `search2discovery/` | **One public Skill entry point**, `$search2discovery` |

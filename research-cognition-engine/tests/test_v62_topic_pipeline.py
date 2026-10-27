@@ -250,6 +250,7 @@ class FinalPlanGateV62Tests(unittest.TestCase):
                           ('H1','https://openalex.org/W123',qid,'https://openalex.org/W123','sha',store.utc()))
 
     def test_valid_plan_not_execution(self):
+        rec=store.read(topic.contract_path(self.ws));rec['route_contract_version']=1;store.write(topic.contract_path(self.ws),rec)
         with mock.patch.object(topic.V5,'status',return_value={'status':'CATALOG_250_PLUS_COMPLETE','counts':{'core':50,'related':150,'inspiration':50}}),\
              mock.patch.object(topic.BATCH,'load_state',return_value={'frozen':{'core_workspace':str(self.ws)}}),\
              mock.patch.object(topic.suite.original_core,'env',return_value={'test':'environment'}),\

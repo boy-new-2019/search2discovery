@@ -27,7 +27,7 @@ def load_catalog(cfg: dict) -> dict:
     if not isinstance(location, str) or not location:
         raise ValueError('missing interdisciplinary field catalog path')
     p=pathlib.Path(location)
-    if p.is_absolute() or '..' in p.parts or not str(p).startswith('references/'):
+    if p.is_absolute() or '..' in p.parts or (not p.parts or p.parts[0]!='references'):
         raise ValueError('Source path, lawful access or network permission check failed at inspiration_diversity.load_catalog (check 31). Do not bypass paywalls or source integrity checks.')
     path=ROOT/p
     if not path.is_file():raise ValueError('Source path, lawful access or network permission check failed at inspiration_diversity.load_catalog (check 33). Do not bypass paywalls or source integrity checks.')

@@ -192,8 +192,10 @@ def search(ws:pathlib.Path, *, online:bool=False,max_requests:int=4,fetcher:Any=
     p=plan(ws)
     if not p['queries']:
         return {'status':p['status'],'requests':0,'pending_review':p['pending_review']}
+    if fetcher is None and (ws/'source_routing.json').is_file():
+        return _multisource_search(ws,p,max_requests)
     cfg=disc.config(ws)
-    api=fetcher if fetcher is not None else disc.OpenAlex(cfg)
+    api=fetcher if fetcher is not None else disc.OpenAlex(cfg,workspace=ws)
     found=[];calls=0;failures=[];newworks=0;relations=0;duplicates=0
     with store.connect(ws) as c:
         usage=c.execute('SELECT COUNT(*) FROM question_query_attempts').fetchone()[0]
@@ -286,6 +288,13 @@ def download(ws:pathlib.Path,*,online:bool=False,limit:int=3,download_fn:Any=Non
     if not 1<=limit<=10:raise ValueError('Frozen research topic or signed research contract mismatch at question_retrieval.download (check 286). Reconfirm boundaries; do not overwrite approved work.')
     ws=ws.expanduser().resolve();_goal_sha(ws);db_init(ws)
     cfg=disc.config(ws)
+    if download_fn is None and (ws/'source_routing.json').is_file():
+        from literature_sources.downloader import obtain
+        with store.connect(ws) as c:
+            known={x[0] for x in c.execute('SELECT work_id FROM question_papers')}
+            if c.execute("SELECT 1 FROM sqlite_master WHERE name='multisource_question_links'").fetchone():
+                known.update(x[0] for x in c.execute('SELECT work_id FROM multisource_question_links'))
+        return obtain(ws,online=online,category='all',limit=limit,family_ids=known)
     fetch=download_fn or disc.download_pdf
     out=[];failed=[]
     with store.connect(ws) as c:
@@ -329,3 +338,48 @@ def download(ws:pathlib.Path,*,online:bool=False,limit:int=3,download_fn:Any=Non
             'scientific_boundary':'This section indexes existing source-verified reviewer observations. It does not certify scientific validity, novelty or new experimental outcomes.'}
     store.write(root(ws)/'last_download_report.json',output)
     return output
+
+
+def _multisource_search(ws,p,max_requests):
+    from literature_sources.coordinator import Coordinator
+    from literature_sources.common import write,utc
+    from literature_sources.common import locked
+    co=Coordinator(ws,online=True,request_limit=max_requests)
+    with locked(co.root):
+        extras=[{'query':q['query'],'category':'related','domain':'','band':q['band'],
+                 'start':q['start_date'],'end':q['end_date'],'question_id':q['question_id'],'query_id':q['query_id']}
+                for q in p['queries'] if not q['completed']]
+        co.plan(extras)
+        pending=[t for t in co.state['tasks'].values() if t.get('question_id') and t['status'] not in ('DONE','REUSED_LEGACY_SUCCESS')]
+        if not pending:return {'status':'QUESTION_SOURCE_TASKS_ALREADY_COMMITTED','requests':0}
+        with store.connect(ws) as c:old_usage=c.execute('SELECT COUNT(*) FROM question_query_attempts').fetchone()[0]
+        reservations=co.state.setdefault('question_request_reservations',[])
+        remaining=MAX_QUERIES_TOTAL-old_usage-sum(x['reserved_physical_requests'] for x in reservations)
+        bound=min(max_requests,remaining)
+        if bound<=0:return {'status':'QUESTION_REQUEST_LIFETIME_CAP','requests':0,'limit':MAX_QUERIES_TOTAL}
+        # Retain conservative reservation after a crash. Never silently refund unknown requests.
+        reservation={'at':utc(),'reserved_physical_requests':bound,'actual_physical_requests':None}
+        reservations.append(reservation);co.save();co.budget['limit']=bound
+        report=co._run_locked(max_steps=min(100,bound*6),extra_queries=extras,question_only=True)
+        reservation['actual_physical_requests']=co.budget['sent'];reservation['report']=report['report'];co.save()
+        report['memory_sync']=co.catalog.sync_memory()
+        with store.connect(ws) as c:
+            c.execute("CREATE TABLE IF NOT EXISTS multisource_question_links(question_id TEXT,query_id TEXT,work_id TEXT,source_record_id TEXT,recorded_at TEXT,PRIMARY KEY(question_id,query_id,source_record_id))")
+            for q in p['queries']:
+                c.execute('INSERT OR IGNORE INTO question_queries VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                    (q['query_id'],q['question_id'],q.get('question_sha',''),p.get('goal_sha',''),
+                     q['query'],q['band'],q['start_date'],q['end_date'],'MULTISOURCE_PARTIAL',utc(),None,0,''))
+            for t in co.state['tasks'].values():
+                if not t.get('question_id'):continue
+                for rid in co.catalog.data['query_links'].get(t['id'],[]):
+                    c.execute('INSERT OR IGNORE INTO multisource_question_links VALUES(?,?,?,?,?)',
+                              (t['question_id'],t['query_id'],co.catalog.data['record_family'][rid],rid,utc()))
+                    rec=co.catalog.data['records'][rid];fid=co.catalog.data['record_family'][rid]
+                    # Preserve the legacy field truthfully: non-OpenAlex identities live in the extension table.
+                    legacy_id=rec.get('source_record_id','') if rec['source']=='openalex' else ''
+                    c.execute('INSERT OR IGNORE INTO question_papers VALUES(?,?,?,?,?)',(t['question_id'],fid,t['query_id'],legacy_id,utc()))
+        report['question_budget']={'legacy_attempts':old_usage,'new_reserved':sum(x['reserved_physical_requests'] for x in reservations),
+                                  'limit':MAX_QUERIES_TOTAL,'crash_reservations_not_refunded':True}
+        report['question_query_completion']='SOURCE_TASK_LEVEL; ORIGINAL OPENALEX COMPLETION ROWS UNMODIFIED'
+        store.write(root(ws)/'last_multisource_search_report.json',report)
+        return report

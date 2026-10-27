@@ -141,12 +141,17 @@ def ensure_budget(ws:pathlib.Path,config:dict,more:int):
 
 def _reserve(ws:pathlib.Path,cfg:dict,job:dict,roles:list[str],prompt_chars:int)->dict:
     extra=1 if job['type']=='cross' else 0
-    ensure_budget(ws,cfg,len(roles)+extra)
     requests={f'{job["id"]}:reader:{role}':prompt_chars for role in roles}
     if extra:
         # Reserve the REQUIRED independent cross-domain captain before readers start.
         requests[job['id']+':captain:'+cross.CAPTAIN]=max(20000,prompt_chars*2)
+    ensure_budget(ws,cfg,sum(not quota.has_reservation(ws,key) for key in requests))
     return quota.reserve(ws,cfg['budget'],requests)
+
+
+def _reserve_prompt(ws:pathlib.Path,cfg:dict,key:str,prompt:pathlib.Path)->dict:
+    ensure_budget(ws,cfg,0 if quota.has_reservation(ws,key) else 1)
+    return quota.reserve_prompt(ws,cfg['budget'],key,prompt)
 
 
 def _local_progress(ws:pathlib.Path,cfg:dict)->list[str]:
@@ -236,7 +241,11 @@ def prepare(ws:pathlib.Path)->dict:
             'Keep the independent thread ID and exact source quotations in the assigned output; preserve the evidence verification schema.\n'
             'Return only the task result and native provenance to the lead. Internal output is English; only the final user-facing delivery is Chinese.\n'
         )
-        core.atomic_text(root/'prompts'/(role+'.md'),text)
+        prompt_path=root/'prompts'/(role+'.md')
+        if not prompt_path.exists():
+            core.atomic_text(prompt_path,text)
+        # Preserve dispatched prompt bytes, including original platform paths.
+        _reserve_prompt(ws,cfg,job['id']+':reader:'+role,prompt_path)
     info={'status':'READY','job_id':job['id'],'kind':job['type'],'phase':phase,'roles':roles,
           'threads_to_spawn':len(roles),'paths':{r:(root/'prompts'/(r+'.md')).as_posix() for r in roles},
           'model_requests':{r:model_profile(ws,r) for r in roles},
@@ -333,9 +342,8 @@ def _request_second(ws:pathlib.Path,manifest:dict,cfg:dict)->dict:
     if role in manifest['roles']:raise RuntimeError('Signed task, stage, commit receipt or report provenance check failed at desktop_bridge._request_second (check 333). Resume only from a verified state.')
     prompt=('Research evidence and workflow notes (desktop_bridge._request_second). Use original source evidence; keep frozen constraints and independent quality gates.'
             + (root/'base_prompt.md').read_text('utf8'))
-    ensure_budget(ws,cfg,1)
-    quota.reserve(ws,cfg['budget'],{jid+':reader:'+role:len(prompt)})
     core.atomic_text(root/'prompts'/(role+'.md'),prompt)
+    _reserve_prompt(ws,cfg,jid+':reader:'+role,root/'prompts'/(role+'.md'))
     manifest['roles'].append(role)
     jwrite(root/'manifest.json',manifest)
     dispatch=jread(root/'dispatch.json')
@@ -429,23 +437,41 @@ def lead_prompt(ws:pathlib.Path,manifest:dict,views:dict[str,dict])->pathlib.Pat
               '<VERIFIED_INDEPENDENT_VIEWS>\n'+core.dump(views)+'\n</VERIFIED_INDEPENDENT_VIEWS>\n'+(root/'base_prompt.md').read_text('utf-8'))
     if len(evidence)>core.MAX_PROMPT_CHARS:
         raise ValueError('Lead arbitration input too long; reduce chunk/batch size rather than silently truncate')
-    path=root/'captain_prompt.md';core.atomic_text(path,evidence)
+    path=root/'captain_prompt.md'
+    if not path.exists():core.atomic_text(path,evidence)
     jwrite(root/'captain_dispatch.json',{'role':role,'requested_profile':model_profile(ws,role),'output_file':str(root/'captain_answer.json')})
     return path
 
 
 def commit(ws:pathlib.Path,jid:str,lead_file:pathlib.Path|None=None,captain_thread_ref:str|None=None)->dict:
     root=task_dir(ws,jid);manifest=jread(root/'manifest.json');cfg=native_cfg(ws)
-    views=members(ws,manifest);job=manifest['job']
-    if (root/'commit.json').exists():return jread(root/'commit.json')
+    job=manifest['job']
+    if (root/'commit.json').exists():
+        saved=jread(root/'commit.json')
+        for role,expected in saved.get('receipt_shas',{}).items():
+            receipt=root/'receipts'/(role+'.json')
+            if core.file_hash(receipt)!=expected or core.file_hash(root/'answers'/(role+'.json'))!=jread(receipt)['answer_sha256']:
+                raise ValueError('Committed member provenance changed')
+        result_path=root/'consolidated.json'
+        if saved.get('consolidated_sha256') and core.file_hash(result_path)!=saved['consolidated_sha256']:
+            raise ValueError('Committed result integrity mismatch')
+        if lead_file:
+            if core.dump(core.read_json_response(lead_file.read_text('utf-8')))!=core.dump(jread(result_path)):
+                raise ValueError('Repeated submission differs from the committed answer')
+            receipt=root/'captain_receipt.json'
+            if receipt.exists() and jread(receipt)['thread_ref']!=captain_thread_ref:
+                raise ValueError('Repeated captain identity differs')
+        return saved
+    views=members(ws,manifest)
     if _s2_needs_second(ws,manifest,views,cfg):
         return _request_second(ws,manifest,cfg)
     if job['type']=='cross':
         # Cross-domain hypotheses always require a real independent captain.
         # No deterministic averaging may turn an analogy into an asserted fact.
         if not lead_file:
-            path=cross.lead_prompt(ws,manifest,views,root/'captain_prompt.md')
-            quota.ensure_existing_or_expand(ws,cfg['budget'],jid+':captain:'+cross.CAPTAIN,path.stat().st_size)
+            path=root/'captain_prompt.md'
+            if not path.exists():path=cross.lead_prompt(ws,manifest,views,path)
+            _reserve_prompt(ws,cfg,jid+':captain:'+cross.CAPTAIN,path)
             jwrite(root/'captain_dispatch.json', {'role':cross.CAPTAIN,
                    'requested_profile':model_profile(ws,cross.CAPTAIN),
                    'output_file':str(root/'captain_answer.json')})
@@ -456,6 +482,8 @@ def commit(ws:pathlib.Path,jid:str,lead_file:pathlib.Path|None=None,captain_thre
         reader_refs={jread(root/'receipts'/(r+'.json'))['native_subagent_thread_ref'] for r in views}
         if captain_thread_ref in reader_refs:
             raise ValueError('Signed task, stage, commit receipt or report provenance check failed at desktop_bridge.commit (check 463). Resume only from a verified state.')
+        if not (root/'captain_prompt.md').is_file():
+            cross.lead_prompt(ws,manifest,views,root/'captain_prompt.md')
         result=core.read_json_response(lead_file.read_text('utf-8'))
         captain_receipt=root/'captain_receipt.json'
         if captain_receipt.is_file():
@@ -468,7 +496,7 @@ def commit(ws:pathlib.Path,jid:str,lead_file:pathlib.Path|None=None,captain_thre
             # recovery, never bill the same native thread twice.
             key=jid+':captain:'+cross.CAPTAIN
             if (root/'captain_prompt.md').exists():
-                quota.ensure_existing_or_expand(ws,cfg['budget'],key,(root/'captain_prompt.md').stat().st_size)
+                _reserve_prompt(ws,cfg,key,root/'captain_prompt.md')
             elif not quota.has_reservation(ws,key):
                 raise ValueError('Local assignment budget or reserved quota check failed at desktop_bridge.commit (check 478). Save the checkpoint before resuming.')
         receipt_hashes={r:core.file_hash(root/'receipts'/(r+'.json')) for r in views}
@@ -476,16 +504,26 @@ def commit(ws:pathlib.Path,jid:str,lead_file:pathlib.Path|None=None,captain_thre
         jwrite(root/'captain_receipt.json',{'role':cross.CAPTAIN,
             'thread_ref':captain_thread_ref,'requested_model':model_profile(ws,cross.CAPTAIN),
             'answer_sha256':core.htext(core.dump(result)),
+            'prompt_sha256':core.file_hash(root/'captain_prompt.md'),
             'model_backend_attested':False,'time':core.ts()})
         jwrite(root/'consolidated.json',result)
         jwrite(root/'commit.json',summary)
         return summary
     if lead_file:
         if not need_lead(job,views,cfg):raise ValueError('Local assignment budget or reserved quota check failed at desktop_bridge.commit (check 489). Save the checkpoint before resuming.')
-        ensure_budget(ws,cfg,1)
-        quota.reserve(ws,cfg['budget'],{jid+':captain:'+_lead_role(job):len((root/'captain_prompt.md').read_text('utf8')) if (root/'captain_prompt.md').exists() else 20000})
+        lead_role=_lead_role(job)
+        if not isinstance(captain_thread_ref,str) or len(captain_thread_ref.strip())<4:
+            raise ValueError('A genuine independent captain thread reference is required')
+        reader_refs={jread(root/'receipts'/(r+'.json')).get('native_subagent_thread_ref') for r in views}
+        if captain_thread_ref in reader_refs:raise ValueError('Captain must be independent of the readers')
+        _reserve_prompt(ws,cfg,jid+':captain:'+lead_role,root/'captain_prompt.md')
         result=core.read_json_response(lead_file.read_text('utf-8'))
-        route='MODEL_CAPTAIN';lead_role=_lead_role(job)
+        old_receipt=root/'captain_receipt.json'
+        if old_receipt.exists():
+            old=jread(old_receipt)
+            if old.get('thread_ref')!=captain_thread_ref or old.get('answer_sha256')!=core.htext(core.dump(result)):
+                raise ValueError('Captain provenance differs from retained receipt')
+        route='MODEL_CAPTAIN'
     elif job['type']=='screen' and not need_lead(job,views,cfg):
         result=screen_fuse(views);route=('SINGLE_INDEPENDENT_STAGE_READING' if len(views)==1 else 'STRICT_DETERMINISTIC_CONSENSUS');lead_role=None
     elif job['type']=='leaf' and not need_lead(job,views,cfg):
@@ -496,8 +534,7 @@ def commit(ws:pathlib.Path,jid:str,lead_file:pathlib.Path|None=None,captain_thre
         result=next(iter(views.values()));route='SINGLE_NAMED_AGENT';lead_role=None
     else:
         path=lead_prompt(ws,manifest,views)
-        ensure_budget(ws,cfg,1)
-        quota.reserve(ws,cfg['budget'],{jid+':captain:'+_lead_role(job):path.stat().st_size})
+        _reserve_prompt(ws,cfg,jid+':captain:'+_lead_role(job),path)
         return {'status':'NEED_CAPTAIN','job_id':jid,'captain_prompt':str(path),
                 'captain_role':_lead_role(job),'requested_profile':model_profile(ws,_lead_role(job))}
     valid=validate_member(ws,manifest,result)
@@ -511,6 +548,11 @@ def commit(ws:pathlib.Path,jid:str,lead_file:pathlib.Path|None=None,captain_thre
         core.submit_file(ctx,jid,result_file)
     if lead_file:
         core.atomic_text(root/'captain_prompt_used.txt',str(lead_file))
+        if not (root/'captain_receipt.json').exists():
+            jwrite(root/'captain_receipt.json',{'job_id':jid,'role':lead_role,
+                'thread_ref':captain_thread_ref,'answer_sha256':core.htext(core.dump(result)),
+                'prompt_sha256':core.file_hash(root/'captain_prompt.md'),
+                'model_backend_attested':False,'time':core.ts()})
     record={'status':'COMMITTED','job_id':jid,'route':route,'lead_role':lead_role,
             'member_roles':list(views),'receipt_shas':{r:core.file_hash(root/'receipts'/(r+'.json')) for r in views},
             'consolidated_sha256':core.file_hash(result_file),'verified_citations':valid.get('validated_citations',valid.get('verified_citations',0)),

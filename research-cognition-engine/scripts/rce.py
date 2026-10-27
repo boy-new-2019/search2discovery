@@ -125,7 +125,8 @@ def _budget_lock(ws:pathlib.Path):
         try:
             lock.mkdir()
             break
-        except FileExistsError:
+        except (FileExistsError,PermissionError):
+            # Windows may report a deleting directory as access denied. Bounded retry only.
             time.sleep(0.05)
     else:
         raise BudgetPause('Budget file lock busy; cannot safely dispatch concurrently')

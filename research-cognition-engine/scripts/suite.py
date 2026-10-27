@@ -69,7 +69,7 @@ def initialize(ws: pathlib.Path) -> dict:
     return {"status": "INSTALL_READY" if cognition.get("status") != "BLOCKED" else "NEEDS_INSPECTION",
             "v44_original": True, "components": {"v5_discovery": discovered,
             "v44_original_reader": {"status": "INITIALIZED", "native_agents": 16,
-                                    "source": "original_v4.4_unmodified"},
+                                    "source": "original_v4.4_with_declared_runtime_patches"},
             "v6_cognition": cognition},
             "notes": ['Research evidence and workflow notes (suite.initialize). Use original source evidence; keep frozen constraints and independent quality gates.', 'Research evidence and workflow notes (suite.initialize). Use original source evidence; keep frozen constraints and independent quality gates.', 'Research evidence and workflow notes (suite.initialize). Use original source evidence; keep frozen constraints and independent quality gates.']}
 
@@ -79,24 +79,24 @@ def doctor(ws: pathlib.Path) -> dict:
     manifest = ROOT / "research-cognition-engine" / "references" / "original_v44_file_manifest.json"
     if not manifest.is_file():
         return {"status": "BLOCKED", "reason": 'Source state and independent reviewer provenance must satisfy the specified quality gate.'}
-    specification = store.read(manifest)
-    missing = []
-    corrupt = []
-    for rel, expected in specification["skill_files_sha256"].items():
-        file = ROOT / "batch-paper-deepread-desktop" / rel
-        if not file.is_file():
-            missing.append(rel)
-        elif hashlib.sha256(file.read_bytes()).hexdigest() != expected:
-            corrupt.append(rel)
+    import release_integrity
+    audit = release_integrity.verify(ROOT)
+    missing = audit['missing']; corrupt = audit['modified']
+    authorized_patches = audit['authorized_utility_patches']
+    patch_status = audit['runtime_patch_status']
     # Bundle root holds .codex/agents; installed skill root is project/.agents/skills.
     role_dir = ROOT.parents[1] / ".codex" / "agents" if ROOT.name == "skills" else ROOT / ".codex" / "agents"
+    if not role_dir.is_dir(): role_dir = ROOT / 'search2discovery/resources/agents'
     role_counts = {k: len(list(role_dir.glob(k + "*.toml"))) for k in ("bpd_", "rce_")}
-    bad = missing or corrupt or role_counts != {"bpd_":16, "rce_":11}
-    return {"status": "BLOCKED" if bad else "ORIGINAL_V44_VERIFIED",
-            "source_archive_sha256": specification["original_archive_sha256"],
-            "source_file_count": len(specification["skill_files_sha256"]),
+    import agent_profiles
+    profile_audit = agent_profiles.audit(role_dir)
+    bad = profile_audit['status'] != 'VALID' or missing or corrupt or patch_status in ('INVALID','PATCH_INTEGRITY_MISMATCH') or role_counts != {"bpd_":16, "rce_":11}
+    return {"status": "BLOCKED" if bad else ('PATCHED_V44_VERIFIED' if authorized_patches else 'ORIGINAL_V44_VERIFIED'),
+            "runtime_patch_status": patch_status, "authorized_utility_patches": authorized_patches,
+            "source_archive_sha256": audit["source_archive_sha256"],
+            "source_file_count": audit["source_file_count"],
             "missing": missing, "modified": corrupt, "role_counts": role_counts,
-            "project": str(ws),
+            "project": str(ws), "agent_profile_validation": profile_audit,
             "native_subagent_availability": "REQUIRES_REAL_WINDOWS_CODEX_APP_CHECK"}
 
 
@@ -127,11 +127,16 @@ def next_action(ws: pathlib.Path, *, allow_incomplete_discovery: bool = False) -
     except (ValueError, RuntimeError, OSError) as exc:
         return {"status": "NEEDS_DISCOVERY_INIT", "reason": str(exc),
                 "next": "Run paper_discovery.py init, then execute real searches only with explicit user authorization"}
-    if found.get("status") != "CATALOG_250_PLUS_COMPLETE" and not allow_incomplete_discovery:
-        return {"status": "NEEDS_DISCOVERY", "counts": found.get("counts"),
-                "shortfalls": found.get("shortfalls"),
-                "next": 'Source state and independent reviewer provenance must satisfy the specified quality gate.'}
+    import evidence_gain_scheduler as gain_scheduler
+    acquisition = gain_scheduler.acquisition_gate(found)
+    discovery_pending = acquisition["pending"] and not allow_incomplete_discovery
+    # Acquisition is still mandatory for final acceptance. It must not starve
+    # an already admitted, source-verified reader campaign of original work.
     if not (ws / "output" / "batch" / "state.json").is_file():
+        if discovery_pending:
+            return {"status": "NEEDS_DISCOVERY", "counts": found.get("counts"),
+                    "shortfalls": found.get("shortfalls"), "acquisition_gate": acquisition,
+                    "next": "Complete reviewed discovery; no admitted reader campaign exists"}
         return {"status": "NEEDS_ORIGINAL_V44_INGEST",
                 "next": 'Source state and independent reviewer provenance must satisfy the specified quality gate.'}
     try:
@@ -144,6 +149,11 @@ def next_action(ws: pathlib.Path, *, allow_incomplete_discovery: bool = False) -
     if not state.get("frozen"):
         job = original_batch.next_screen(ws, state)
         if job:
+            pause = gain_scheduler.automatic_search_pause(ws)
+            if pause:
+                return {"status": "PAUSED_FOR_EVIDENCE_STRATEGY_REVIEW",
+                        "job": job["id"], "evidence_gain_policy": pause,
+                        "next": "Review target-gap routing before any new screening; retain every pending job and charge"}
             return {"status": "READ_SCREENING", "stage":job["stage"], "job":job["id"],
                     "next": 'Source state and independent reviewer provenance must satisfy the specified quality gate.'}
         if not state.get("selection"):
@@ -155,8 +165,19 @@ def next_action(ws: pathlib.Path, *, allow_incomplete_discovery: bool = False) -
         if not can:
             return {"status": "READER_SEAL_BLOCKED", "reasons":gaps,
                     "next": 'Source state and independent reviewer provenance must satisfy the specified quality gate.'}
+        # Match seal()'s original target/supplement requirements as well as
+        # can_seal(). Coverage warnings are retained, never silently cleared.
+        shortfalls = gain_scheduler.original_seal_shortfalls(original_batch, ws, state)
+        if any(shortfalls.values()):
+            return {"status": "READER_SEAL_BLOCKED", "reasons": shortfalls,
+                    "acquisition_gate": acquisition,
+                    "next": "Meet original target and supplemental requirements; no automatic gap waiver"}
+        original_batch.verify_sources(ws, state)
         return {"status": "READY_TO_SEAL_ORIGINAL_V44", "selected_core_papers":len(state["selection"]["last_selected"]),
-                "next": "Run native_v44_launcher.py seal; if discovery gap remains, explicit --accept-discovery-gap is required and clearly reported"}
+                "coverage_gaps": state["selection"].get("gaps", []),
+                "acquisition_gate": acquisition,
+                "evidence_gain_policy": gain_scheduler.status(ws),
+                "next": "Run original native_v44_launcher.py seal without a gap waiver; retain coverage warnings"}
     sub = pathlib.Path(state["frozen"]["core_workspace"])
     try:
         ctx = original_core.env(sub)
@@ -167,11 +188,16 @@ def next_action(ws: pathlib.Path, *, allow_incomplete_discovery: bool = False) -
                 "next": 'Inspect the signed checkpoint, verify the original full-text evidence and reviewer receipts, then continue only the stage justified by a substantive evidence gap and available quota.'}
     if job is not None:
         return {"status": "READ_ORIGINAL_V44_CORE", "job":job["id"], "job_type":job["type"],
-                "round":job.get("round"),
-                "next": "Run native_v44_launcher.py prepare; each independent original-source expert writes JSON, collect, commit, repeat"}
+                "round":job.get("round"), "acquisition_gate": acquisition,
+                "evidence_gain_policy": gain_scheduler.status(ws),
+                "next": "Prepare only with available authorized quota; retain five rounds, independent roles and veto"}
     if reading.get("status") not in ("COMPLETE",):
         return {"status": "READER_NOT_APPROVED", "reading_status":reading["status"],
                 "next": "Failed/missing audit, coverage or visual check requires correction; never silently PASS"}
+    if discovery_pending:
+        return {"status": "NEEDS_DISCOVERY", "counts": found.get("counts"),
+                "shortfalls": found.get("shortfalls"), "acquisition_gate": acquisition,
+                "next": "Reader work is complete; unresolved acquisition still blocks downstream acceptance"}
     if not (ws / "research_cognition_config.json").is_file():
         return {"status":"NEEDS_RCE_INIT", "next":"Run suite.py init after user confirms goal.md"}
     with store.connect(ws) as con:
@@ -196,6 +222,16 @@ def next_action(ws: pathlib.Path, *, allow_incomplete_discovery: bool = False) -
 
 def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else argv
+    if argv and argv[0] in ('gap-record','gap-status'):
+        import evidence_gain_scheduler as gaps
+        parser=argparse.ArgumentParser();parser.add_argument('command');parser.add_argument('--workspace',required=True,type=pathlib.Path);parser.add_argument('--event-file',type=pathlib.Path)
+        args=parser.parse_args(argv)
+        if args.command=='gap-record' and not args.event_file:parser.error('--event-file is required')
+        result=gaps.record_batch(args.workspace,store.read(args.event_file)) if args.command=='gap-record' else gaps.status(args.workspace)
+        print(json.dumps(result,ensure_ascii=False,indent=2));return 0
+    if argv and argv[0]=='campaign-plan':
+        import campaign
+        return campaign.main(argv[1:])
     if argv and argv[0] in ('round-reports','smart-next','round-baseline'):
         import round_intelligence as rounds
         sub=argparse.ArgumentParser(description='v6.5 round reports and evidence-aware efficiency decisions')

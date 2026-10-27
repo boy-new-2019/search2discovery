@@ -13,7 +13,7 @@
     "max_canary_regression": 0.0
   },
   "budget": {
-    "max_native_assignments_per_cycle": 8,
+    "max_native_assignments_per_cycle": 12,
     "max_input_chars_per_cycle": 350000,
     "max_papers_in_task_context": 8,
     "max_context_chars": 70000,

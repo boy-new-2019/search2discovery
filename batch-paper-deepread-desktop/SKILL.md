@@ -1,7 +1,8 @@
 ---
 name: batch-paper-deepread-desktop
-version: 4.4.0-english-policy
-summary: Windows Codex native subagent multi-round scholarly paper reading with evidence gates, efficiency budgets, and independent veto.
+metadata:
+  version: "4.4.0-english-policy"
+description: Windows Codex native subagent multi-round scholarly paper reading with evidence gates, efficiency budgets, and independent veto.
 ---
 # Batch Paper Deepread | Mandatory reading contract
 

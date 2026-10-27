@@ -1,0 +1,1 @@
+"""Independent literature sources with preserved provenance."""

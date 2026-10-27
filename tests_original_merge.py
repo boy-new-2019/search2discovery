@@ -137,7 +137,7 @@ class FullOriginalMergeTests(unittest.TestCase):
     def test_clean_one_archive_all_originals(self):
         self._install()
         check=suite.doctor(self.ws)
-        self.assertEqual(check['status'],'ORIGINAL_V44_VERIFIED',check)
+        self.assertEqual(check['status'],'PATCHED_V44_VERIFIED',check)
         self.assertEqual(check['source_file_count'],35)
         self.assertEqual(check['role_counts'],{'bpd_':16,'rce_':11})
         self.assertEqual(install_v6.install(self.ws)['status'],'FULL_STACK_INSTALLED')
@@ -156,7 +156,7 @@ class FullOriginalMergeTests(unittest.TestCase):
         installed=install_v6.install(self.ws,upgrade=True)
         self.assertEqual(installed['status'],'FULL_STACK_INSTALLED')
         self.assertTrue(installed['backups'])
-        self.assertEqual(suite.doctor(self.ws)['status'],'ORIGINAL_V44_VERIFIED')
+        self.assertEqual(suite.doctor(self.ws)['status'],'PATCHED_V44_VERIFIED')
         self.assertEqual(before.read_bytes(),original)
         self.assertEqual((self.ws/'input'/'private.md').read_text(),'Private research raw text')
         self.assertEqual((self.ws/'output'/'important.txt').read_text(),'PROVEN EXPERIMENT')
@@ -194,7 +194,7 @@ class FullOriginalMergeTests(unittest.TestCase):
         self.assertEqual(done.returncode,0,done.stderr)
         result=json.loads(done.stdout)
         self.assertEqual(result['added'],1,result)
-        self.assertEqual(suite.doctor(self.ws)['status'],'ORIGINAL_V44_VERIFIED')
+        self.assertEqual(suite.doctor(self.ws)['status'],'PATCHED_V44_VERIFIED')
     def test_source_pagination_collision_gets_distinct_v44_anchor(self):
         self._fully_read()
         state=batch.load_state(self.ws);paper=next(x for x in state['papers'] if x['status']=='READY')

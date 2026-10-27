@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "release_patch": "1.0.0-runtime.2",
+  "base_manifest_sha256": "9e89d94226157e8d188472f2921175d04129c757ed29a0c8f616703baaf39fc2",
+  "files": {
+    "scripts/configure.py": {
+      "before_sha256": "b32febacf73d2524b08bb872579ad18a12bd941484e65619c1fe95e7169cc05a",
+      "after_sha256": "70f1c1587f517907be5813fdbdb002e34d8c85b71b49570b1a90c713521c4cdc",
+      "reason": "Support Python 3.11 f-string grammar."
+    },
+    "scripts/desktop_bridge.py": {
+      "before_sha256": "3649b8efbf1167208ea6b7aaeda660e0cf6fe27a8f58c436012f8c3bb4ad75da",
+      "after_sha256": "f40705c2c20366d039dc4a31a29a54a8074df02a65a4e260031dce3f3f583a68",
+      "reason": "Hash-bound Unicode prompt reservation and idempotent captain collection."
+    },
+    "scripts/quota_guard.py": {
+      "before_sha256": "8bf26adb1b85c9cb4eee023dc3142cb38a74d302b68416c9040ae43d476da0ad",
+      "after_sha256": "d40d82b38e4f4f82ae7343655975e85e649a86dab5b300fb2cbb0b20377c9fa3",
+      "reason": "Count Unicode code points consistently; retain historical over-reservations and receipt hashes."
+    },
+    "SKILL.md": {
+      "before_sha256": "2bb8a055815090c7be7a4b5c34209bcfee8557e9505d4ae6fc90e28fe97566ef",
+      "after_sha256": "ac41fb6d6cd81bb52978e5ef81e1698782dea05cac2a2035f51d60788f968892",
+      "reason": "Use supported description and metadata frontmatter so Codex can discover the installed reader Skill."
+    },
+    "tests/test_deepread.py": {
+      "before_sha256": "8e1effa09ab45d54cb3f60a62141c72198b987a7585a4eff72fe1721b21c6d86",
+      "reason": "Run the subprocess fixture through Python on Windows and POSIX instead of relying on executable shebangs.",
+      "after_sha256": "ef7f8557c10cb9537983d519bed4560b24c23205e561caeeabd893863730e942"
+    }
+  }
+}

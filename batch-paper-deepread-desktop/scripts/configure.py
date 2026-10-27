@@ -65,7 +65,7 @@ def _merge(base, patch, template, path=""):
         else:
             dynamic = _allowed_dynamic(path, key)
             if dynamic is None:
-                raise ValueError(f'Unsupported configuration field {key!r} in {path or 'configuration root'}. Only declared schema fields may be modified.')
+                raise ValueError(f"Unsupported configuration field {key!r} in {path or 'configuration root'}. Only declared schema fields may be modified.")
             sample = dynamic if "_primitive_type" not in dynamic else base.get(key, [] if dynamic["_primitive_type"] is list else "")
         name = f"{path}.{key}" if path else key
         if isinstance(sample, dict):

@@ -168,7 +168,7 @@ class V61OriginalStack(unittest.TestCase):
         self.assertTrue(manifest.is_file())
 
     def test_non_tamper_install_upgrade_and_original_v44_manifest(self):
-        self.assertEqual(full.doctor(self.ws)['status'],'ORIGINAL_V44_VERIFIED')
+        self.assertEqual(full.doctor(self.ws)['status'],'PATCHED_V44_VERIFIED')
         path=self.ws/'.agents/skills/research-cognition-engine/scripts/workflow_v61.py'
         self.assertTrue(path.is_file())
         (self.ws/'output'/'protected.txt').write_text('CANNOT OVERWRITE','utf8')
