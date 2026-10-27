@@ -37,21 +37,43 @@ def _literal_source_quote(page_text: str, quote: str) -> str:
     """
     if store.norm(quote) in store.norm(page_text):
         return quote
-    chars, offsets = [], []
+    # NFKC composition can cross character boundaries elsewhere on a PDF page.
+    # Map canonically decomposed characters, retaining exact source offsets.
+    decomposed, pending = [], []
     for index, char in enumerate(page_text):
-        for normalized in unicodedata.normalize("NFKC", char).replace("\u00ad", ""):
-            if not normalized.isspace():
-                chars.append(normalized)
-                offsets.append(index)
-    flat = "".join(chars)
-    target = original.norm(quote)
-    start = flat.find(target)
-    if flat != original.norm(page_text) or not target or start < 0:
+        for normalized in unicodedata.normalize("NFKD", char):
+            item = (normalized, index)
+            if unicodedata.combining(normalized):
+                pending.append(item)
+            else:
+                decomposed.extend(sorted(pending, key=lambda x: unicodedata.combining(x[0])))
+                pending = []
+                decomposed.append(item)
+    decomposed.extend(sorted(pending, key=lambda x: unicodedata.combining(x[0])))
+    chars, offsets = [], []
+    for char, index in decomposed:
+        if char != "\u00ad" and not char.isspace():
+            chars.append(char)
+            offsets.append(index)
+    def decomposed_norm(value):
+        return "".join(x for x in unicodedata.normalize("NFKD", value)
+                       if x != "\u00ad" and not x.isspace())
+    flat, target = "".join(chars), decomposed_norm(quote)
+    if flat != decomposed_norm(page_text) or not target:
         raise EvidenceBridgeError("Reader quotation cannot map to a literal source span")
-    literal = page_text[offsets[start]:offsets[start + len(target) - 1] + 1]
-    if not 10 <= len(store.norm(literal)) <= 280:
-        raise EvidenceBridgeError("Literal source span exceeds memory quotation bounds")
-    return literal
+    start = flat.find(target)
+    while start >= 0:
+        positions = offsets[start:start + len(target)]
+        literal = page_text[min(positions):max(positions) + 1]
+        # Reject partial compatibility-character or combining-cluster matches.
+        # The original NFKC reader and strict literal memory matcher stay intact.
+        if original.norm(literal) == original.norm(quote):
+            if not 10 <= len(store.norm(literal)) <= 280:
+                raise EvidenceBridgeError("Literal source span exceeds memory quotation bounds")
+            return literal
+        start = flat.find(target, start + 1)
+    raise EvidenceBridgeError("Reader quotation cannot map to a literal source span")
+
 
 
 def _raw_file(ws: pathlib.Path, relative: str) -> pathlib.Path:

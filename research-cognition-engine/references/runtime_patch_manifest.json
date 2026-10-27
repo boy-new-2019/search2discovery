@@ -20,8 +20,8 @@
     },
     "SKILL.md": {
       "before_sha256": "2bb8a055815090c7be7a4b5c34209bcfee8557e9505d4ae6fc90e28fe97566ef",
-      "after_sha256": "ac41fb6d6cd81bb52978e5ef81e1698782dea05cac2a2035f51d60788f968892",
-      "reason": "Use supported description and metadata frontmatter so Codex can discover the installed reader Skill."
+      "after_sha256": "d3a6991dd9f0718c8143dcaf1b7aff0e42b85017b91e73d35bbaace0f4acf8f6",
+      "reason": "Use supported discovery frontmatter and require hash-verified lookup of complete indexed synthesis evidence without replacing original reading or independent review."
     },
     "tests/test_deepread.py": {
       "before_sha256": "8e1effa09ab45d54cb3f60a62141c72198b987a7585a4eff72fe1721b21c6d86",
@@ -30,8 +30,8 @@
     },
     "scripts/deepread.py": {
       "before_sha256": "d611c43fea10baba3b880ceff28461d2ee6e72bcaabe1c573f49cb692e2669d9",
-      "after_sha256": "c69edeba3dbe825792e57cc5740b4b74d7a0e8dd9b9d9c160e77a50b486e746b",
-      "reason": "Use extended Win32 paths at filesystem boundaries for nested frozen-core answer, receipt and rendered source-page files; retain task identifiers and evidence validation."
+      "after_sha256": "b2503e02065e21ff67304e668dc20087d41dcc996597b0493963b12d35a93206",
+      "reason": "Use extended Win32 filesystem paths and bounded whole-record synthesis prompts with a complete hash-bound evidence index; preserve source IDs, original reading rounds, mandatory instructions and unchanged prompt limits."
     }
   }
 }

@@ -23,3 +23,6 @@
 - For large cognition memories, pack whole source-balanced records and retain a hash-bound complete index. Pin linked evidence; FINAL needs actual committed plans and novelty objections, while independent novelty reviewers remain blinded.
 
 - Fulltext task selection counts evidence by work and deduplicates PDF/source aliases. Prefer already anchored works before download-only files, then lower covered works; keep download-only startup and the complete lookup index available. This is evidence routing, not a scientific quality verdict.
+
+- Unicode source-span alignment must account for whole-string composition and canonical reordering. Decomposition offsets plus local original-reader equivalence recover exact source spans without relaxing quotation checks.
+- Original reader synthesis can outgrow its fixed prompt limit after independent evidence fusion. Keep whole balanced records, one primary evidence record per source row, untouched mandatory instructions and vetoes, and a complete immutable hash-bound index; never raise caps or count indexed previews as scientific review.

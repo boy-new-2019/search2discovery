@@ -369,7 +369,7 @@ def previous_context(ctx: dict, pid: str, r: int) -> str:
     return dump(items)
 
 
-def make_prompt(ctx: dict, job: dict) -> str:
+def _unpacked_prompt(ctx: dict, job: dict) -> str:
     typ, r, pid = job["type"], job.get("round"), job.get("paper_id")
     header = f"""You are an independent academic paper-reading agent. Write ONE parseable JSON object, without Markdown fences, in concise English.
 Your assignment is evidence-grounded reading, not executing experiments. Respect all frozen user-approved research definitions, methods and authentic results.
@@ -453,6 +453,102 @@ Return PASS only with no critical/major substantiated concern; VETO whenever req
 Only JSON.
 """
     raise RuntimeError(f"Unknown task type: {typ}")
+
+
+def _bounded_synthesis_prompt(ctx: dict, job: dict, prompt: str, cap: int) -> str:
+    """Keep whole records and all source evidence under the unchanged prompt cap."""
+    from collections import deque
+    tags = {"merge": "VERIFIED_PER_CHUNK_RESULTS", "group": "VERIFIED_PAPER_OR_GROUP_NOTES",
+            "master": "VERIFIED_PAPER_OR_GROUP_NOTES", "final": "ALL_ROUND_MASTERS"}
+    tag = tags.get(job["type"])
+    if len(prompt) <= cap or tag is None:
+        return prompt
+    opening, closing = f"<{tag}>\n", f"\n</{tag}>"
+    prefix, rest = prompt.split(opening, 1)
+    body, suffix = rest.split(closing, 1)
+    rows = json.loads(body)
+    if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+        raise ValueError("Invalid original synthesis evidence records")
+    complete = {"schema_version": 1, "scope": "ORIGINAL_READING_CONTEXT_NOT_NEW_REVIEW",
+                "job_id": job["id"], "run_id": ctx.get("run_id"),
+                "goal_sha256": htext(ctx["goal"]), "records": rows,
+                "source_lookup": [{**row, "original_path": str(ctx["ws"] / "input" / row["file"])}
+                                  for row in ctx.get("papers", [])]}
+    raw = (dump(complete) + "\n").encode("utf-8")
+    digest = hbytes(raw)
+    index = ctx["run"] / "evidence_context_index" / (digest + ".json")
+    target = filesystem_path(index)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with target.open("xb") as handle:
+            handle.write(raw)
+    except FileExistsError:
+        if target.read_bytes() != raw:
+            raise ValueError("Changed immutable original synthesis context index")
+    selected, fields, indices = [], [], []
+    identity_lists = {"paper_ids", "checked_papers"}
+    for row in rows:
+        keys = [key for key, value in row.items() if isinstance(value, list) and key not in identity_lists]
+        selected.append({key: ([] if key in keys else value) for key, value in row.items()})
+        fields.append(keys)
+        indices.append({key: [] for key in keys})
+    total = sum(len(row[key]) for row, keys in zip(rows, fields) for key in keys)
+    packing = {"policy": "WHOLE_RECORD_ROW_AND_FIELD_ROUND_ROBIN",
+               "available_list_items": total, "included_list_items": 0,
+               "indexed_only_list_items": total, "source_field_indices": indices,
+               "complete_index": {"path": str(index), "sha256": digest, "bytes": len(raw)}}
+    packed = {"records": selected, "evidence_selection": packing}
+    notice = ("BOUNDED ORIGINAL SYNTHESIS CONTEXT: Whole records are balanced across source rows and fields. "
+              "No quotation or record was truncated. The complete hash-bound index retains every original record "
+              "and source path. Verify its SHA256 and perform filtered lookups for omitted evidence before "
+              "conclusions; omissions are not absence of evidence. Original sources remain authoritative.\n")
+    def render():
+        return prefix + notice + opening + dump(packed) + closing + suffix
+    if len(render()) > cap:
+        raise ValueError("Required original synthesis instructions exceed prompt cap")
+    pinned = set()
+    def add(i, key, position, required=False):
+        selected[i][key].append(rows[i][key][position])
+        indices[i][key].append(position)
+        packing["included_list_items"] += 1
+        packing["indexed_only_list_items"] -= 1
+        if len(render()) <= cap:
+            return True
+        selected[i][key].pop()
+        indices[i][key].pop()
+        packing["included_list_items"] -= 1
+        packing["indexed_only_list_items"] += 1
+        if required:
+            raise ValueError("Required source-row evidence exceeds original synthesis prompt cap")
+        return False
+    # Every source row/reading round keeps a complete primary evidence record.
+    for i, row in enumerate(rows):
+        primary = next((key for key in ("key_points", "observations", "comparisons") if row.get(key)), None)
+        if primary:
+            add(i, primary, 0, required=True)
+            pinned.add((i, primary, 0))
+    buckets = {i: {key: deque(j for j in range(len(row[key])) if (i, key, j) not in pinned)
+                   for key in fields[i] if row[key]} for i, row in enumerate(rows)}
+    kinds = {i: deque(key for key in sorted(keys) if keys[key]) for i, keys in buckets.items()}
+    active = deque(i for i in range(len(rows)) if kinds[i])
+    while active:
+        i = active.popleft()
+        key = kinds[i].popleft()
+        position = buckets[i][key].popleft()
+        add(i, key, position)
+        if buckets[i][key]:
+            kinds[i].append(key)
+        if kinds[i]:
+            active.append(i)
+    result = render()
+    if len(result) > cap:
+        raise ValueError("Original synthesis prompt exceeds unchanged cap")
+    return result
+
+
+def make_prompt(ctx: dict, job: dict) -> str:
+    return _bounded_synthesis_prompt(ctx, job, _unpacked_prompt(ctx, job), MAX_PROMPT_CHARS)
+
 
 def generate_job(ctx: dict, template: dict) -> dict:
     job = dict(template)
