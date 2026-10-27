@@ -224,6 +224,20 @@ class CatalogTests(Base):
             self.assertEqual(con.execute("SELECT title,category FROM works WHERE work_id='old'").fetchone(),('Protected evidence','core'))
             self.assertEqual(con.execute('SELECT * FROM claims').fetchall(),[('untouched',)])
 class CoordinatorTests(Base):
+    def test_openalex_bounded_none_cursor_does_not_attest_exhaustion(self):
+        self.workspace();c=Coordinator(self.ws)
+        semantic={k:TASK[k] for k in ('query','category','domain','band','start','end')}
+        task=c.add_task(semantic,'openalex',0)
+        task.update(status='DONE',pages_completed=1,last_step_at='2026-10-26T01:00:00Z')
+        c.record_query_pass(task,None,None,20,20,0)
+        receipt=read(pathlib.Path(task['query_pass_receipts'][0]['path']))
+        self.assertIsNone(receipt['retrieval_exhaustive'])
+        self.assertTrue(receipt['exhaustion_not_attested_by_bounded_adapter'])
+        self.assertTrue(c.query_coverage_completed(task))
+        coverage=c.status()['reviewed_query_coverage']
+        proof=next(x for x in coverage['task_evidence'] if x['task_id']==task['id'])
+        self.assertIsNone(proof['pagination_exhausted'])
+        self.assertEqual(coverage['bounded_openalex_passes_without_exhaustion_attestation'],1)
     def test_crossref_missing_registry_doi_does_not_pause_healthy_query_source(self):
         self.workspace();seen=[]
         class A:

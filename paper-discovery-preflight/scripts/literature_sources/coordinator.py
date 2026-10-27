@@ -257,7 +257,8 @@ class Coordinator:
                  'request_cursor':request_cursor,'next_cursor':next_cursor,
                  'page_number':task['pages_completed'],'returned_rows':returned,
                  'new_manifestations':added,'rejected_outside_window':rejected,
-                 'retrieval_exhaustive':next_cursor is None}
+                 'retrieval_exhaustive':None if task['source']=='openalex' else next_cursor is None,
+                 'exhaustion_not_attested_by_bounded_adapter':task['source']=='openalex'}
         path=self.root/'query_passes'/(stable(receipt)+'.json');write(path,receipt)
         proof={'path':str(path),'sha256':sha(path.read_bytes())}
         task.setdefault('query_pass_receipts',[]).append(proof)
@@ -324,7 +325,8 @@ class Coordinator:
         covered_tasks=[t for t in self.state['tasks'].values() if t.get('band')=='RECENT_3Y' and self.query_coverage_completed(t)]
         pass_evidence=[{'task_id':t['id'],'source':t['source'],
             'scope':'BOUNDED_API_QUERY_PASS' if t['source'] in ('crossref','arxiv','openreview','openalex') else 'COMPLETED_REPOSITORY_INDEX_SCOPE',
-            'pagination_exhausted':t.get('cursor') is None,
+            'pagination_exhausted':None if t['source']=='openalex' else t.get('cursor') is None,
+            'exhaustion_not_attested_by_bounded_adapter':t['source']=='openalex',
             'receipt':self.committed_page_evidence.get(t['id']) or (t.get('query_pass_receipts') or [None])[-1]} for t in covered_tasks]
         continuing_api=[t['id'] for t in covered_tasks if t['source'] in ('crossref','arxiv','openreview','openalex') and t.get('cursor') is not None]
         sources={r['source'] for r in self.catalog.data['records'].values() if r['source'] in self.cfg['primary_sources']}
@@ -343,6 +345,7 @@ class Coordinator:
             'verified_task_passes':len(covered_tasks),'task_evidence':pass_evidence,
             'continuing_api_task_ids':continuing_api,'non_exhaustive_api_passes':len(continuing_api),
             'exhaustive_corpus_search_claimed':False,
+            'bounded_openalex_passes_without_exhaustion_attestation':sum(t['source']=='openalex' for t in covered_tasks),
             'pagination_cursors_and_task_statuses_preserved':True},
           'legacy_pending_queries_without_equivalent_source_page':pending_legacy,
           'inspiration_domain_shortfalls':summary['preferred_domain_shortfalls'],'legacy_openalex_source_window':baseline.get('selection',{}).get('status'),
