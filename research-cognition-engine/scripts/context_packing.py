@@ -16,6 +16,7 @@ def archive(ws, sources, claims):
     except FileExistsError:
         if path.read_bytes()!=raw:raise ValueError("Changed immutable evidence context index")
     return {"path":str(path),"sha256":digest,"fulltext_sources":len(sources),
+            "distinct_source_file_hashes":len({row.get("file_sha") or row["source_id"] for row in sources}),
             "anchor_records":len(claims),
             "use":"Lookup omitted original source paths and claim IDs when needed; verify hashes and original pages. The index is not a semantic review."}
 
@@ -34,8 +35,9 @@ def required_ids(context):
 def balanced(claims):
     groups=collections.defaultdict(lambda:collections.defaultdict(collections.deque))
     for row in claims:
-        groups[row.get("source_id") or row["work_id"]][row.get("claim_kind","")].append(row)
-    # Rotate source and claim kind so one prolific, recently read paper cannot
+        groups[row.get("work_id") or row["source_id"]][row.get("claim_kind","")].append(row)
+    # Rotate work identity and claim kind; source aliases must not double-weight a paper.
+    # One prolific, recently read paper cannot
     # replace all other papers or all published evidence with its conclusions.
     queues={source:collections.deque(sorted(kinds)) for source,kinds in groups.items()}
     active=collections.deque(sorted(groups))
@@ -54,7 +56,7 @@ def fit(context, cap, render):
     if pinned-known:raise ValueError("Linked claim missing from complete evidence context")
     selected=[row for row in claims if row["claim_id"] in pinned]
     result={**context,"claims":selected}
-    result["evidence_selection"]={"policy":"WHOLE_RECORD_SOURCE_AND_KIND_ROUND_ROBIN",
+    result["evidence_selection"]={"policy":"WHOLE_RECORD_WORK_AND_KIND_ROUND_ROBIN",
         "available_claims":len(claims),"included_claims":len(selected),
         "omitted_claims":len(claims)-len(selected),"required_claims":len(pinned),
         "omissions_available_in_hash_bound_index":True}

@@ -31,6 +31,12 @@ class PackingTests(unittest.TestCase):
         self.assertEqual(rows,original)
         self.assertEqual({r["claim_id"] for r in ordered},{r["claim_id"] for r in rows})
 
+    def test_alias_sources_do_not_double_weight_one_work(self):
+        first=claim(1,"PDF");alias=claim(2,"PDF-V44");other=claim(3,"OTHER")
+        first["work_id"]=alias["work_id"]="SAME_WORK"
+        ordered=list(context_packing.balanced([first,alias,other]))
+        self.assertEqual({row["work_id"] for row in ordered[:2]},{"SAME_WORK","OTHER"})
+
     def test_actual_render_cap_whole_quotes_and_pinned_evidence(self):
         rows=[claim(i) for i in range(80)]+[claim(80,"B")]
         context={"claims":rows,"hypotheses":[{"linked_claims":"[\"79\"]"}],
@@ -61,6 +67,7 @@ class PackingTests(unittest.TestCase):
             result=context_packing.archive(ws,sources,rows);path=pathlib.Path(result["path"])
             self.assertEqual(store.hashbytes(path.read_bytes()),result["sha256"])
             self.assertEqual(store.read(path)["claims"],rows)
+            self.assertEqual(result["distinct_source_file_hashes"],1)
             self.assertEqual(context_packing.archive(ws,sources,rows),result)
             path.write_text("tampered",encoding="utf-8")
             with self.assertRaisesRegex(ValueError,"immutable"):
