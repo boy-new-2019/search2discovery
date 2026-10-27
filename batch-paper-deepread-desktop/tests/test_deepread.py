@@ -177,7 +177,7 @@ class PaperFlowTests(unittest.TestCase):
                 mod.validate(ctx,job,repeated)
 
     def test_codex_subprocess_routes_explicit_model_in_isolated_cwd(self):
-        import os
+        import os, sys
         with tempfile.TemporaryDirectory() as d:
             ws = Path(d)
             ctx = fixture(ws)
@@ -190,7 +190,7 @@ with open(where,'w') as f: f.write(json.dumps({'ok':1, 'cwd':os.getcwd(), 'args'
 ''', encoding="utf-8")
             fake_cli.chmod(0o755)
             cfg = ctx["cfg"]
-            cfg["codex"]["binary"] = str(fake_cli)
+            cfg["codex"]["binary"] = sys.executable
             mod.jwrite(ws / "reading_config.json",cfg)
             # Existing in-memory context has config snapshot, update it for mock invocation.
             ctx["cfg"] = cfg
@@ -199,7 +199,7 @@ with open(where,'w') as f: f.write(json.dumps({'ok':1, 'cwd':os.getcwd(), 'args'
             from unittest import mock
             import sys
             real_run=mod.subprocess.run
-            def fixture_cli(cmd,**kwargs):return real_run([sys.executable,*cmd],**kwargs)
+            def fixture_cli(cmd,**kwargs):return real_run([sys.executable,str(fake_cli),*cmd[1:]],**kwargs)
             with mock.patch.object(mod.subprocess,'run',side_effect=fixture_cli):
                 raw, model = mod.call_codex(ctx,job,job["prompt"])
             record = json.loads(raw)

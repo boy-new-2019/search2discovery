@@ -11,3 +11,4 @@
 - Budget feasibility precedes optional breadth. Local caps are not provider quota. Ready core reading must not be starved by scientific questions misclassified as acquisition gates.
 - New topic contracts require a signed final route/method card or an independently reviewed no-viable conclusion. Never recommend a candidate rejected by prior-art reviewers.
 - Personal Skill bootstrap must work without the original repository path; test from an isolated personal directory with all four siblings.
+- Python 3.12 Windows executable discovery applies PATHEXT rules to fixture paths; use an actual Python executable while retaining real subprocess argument and isolated-directory checks.

@@ -26,7 +26,7 @@
     "tests/test_deepread.py": {
       "before_sha256": "8e1effa09ab45d54cb3f60a62141c72198b987a7585a4eff72fe1721b21c6d86",
       "reason": "Run the subprocess fixture through Python on Windows and POSIX instead of relying on executable shebangs.",
-      "after_sha256": "ef7f8557c10cb9537983d519bed4560b24c23205e561caeeabd893863730e942"
+      "after_sha256": "4a2b8b9290fdb81336e248245975c18616a0e1e2548222d46438c4cacde435a5"
     }
   }
 }
