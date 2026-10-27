@@ -393,10 +393,36 @@ def priority_venue(w:dict,c:dict)->bool:
     return False
 
 
+def metadata_phrase_tokens(text:str)->set[str]:
+    """Conservative English inflections for metadata retrieval nomination only."""
+    stop={'a','an','the','and','or','of','for','with','in','on','to','under','by','from','at','as','into'}
+    result=set()
+    for token in re.findall(r'[\w]+',norm(text)):
+        if token in stop:continue
+        if len(token)>5 and token.endswith('ies'):token=token[:-3]+'y'
+        elif len(token)>4 and token.endswith('s') and not token.endswith(('ss','us','is','ous')):token=token[:-1]
+        if len(token)>6 and token.endswith('ing'):
+            token=token[:-3]
+            if len(token)>2 and token[-1]==token[-2]:token=token[:-1]
+        result.add(token)
+    return result
+
+def metadata_phrase_match(phrase:str,text:str)->bool:
+    wanted=metadata_phrase_tokens(phrase)
+    return bool(wanted) and wanted<=metadata_phrase_tokens(text)
+
 def paper_scores(w:dict,c:dict)->dict:
     title=norm(w['title']); abstract=norm(w.get('abstract',''))
+    generic=c.get('topic_generic_research_mode') is True
+    if generic:
+        # Tokenize each real metadata field once, not once per reviewed keyword.
+        tokenized={text:metadata_phrase_tokens(text) for text in (title,abstract,title+' '+abstract)}
+        def contains(phrase,text):
+            wanted=metadata_phrase_tokens(phrase)
+            return bool(wanted) and wanted<=tokenized[text]
+    else:contains=lambda phrase,text:norm(phrase) in text
     def score(keys):
-        return round(sum((3.3 if norm(x) in title else 0)+(1.4 if norm(x) in abstract else 0) for x in set(keys) if x),2)
+        return round(sum((3.3 if contains(x,title) else 0)+(1.4 if contains(x,abstract) else 0) for x in set(keys) if x),2)
     core_score=score(c['core_keywords'])
     related_score=score(c['related_keywords'])
     # Legacy automotive anchor is kept for the untouched default campaign.
@@ -404,7 +430,7 @@ def paper_scores(w:dict,c:dict)->dict:
     # papers do not mention cars/BEV. Scientific topicality remains an S1/S2
     # judgment, not a mere keyword classifier output.
     if c.get('topic_generic_research_mode') is True:
-        anchor=any(norm(k) in (title+' '+abstract) for k in c['core_keywords'] if k and len(norm(k))>=3)
+        anchor=any(contains(k,title+' '+abstract) for k in c['core_keywords'] if k and len(norm(k))>=3)
     else:
         anchor=any(x in (title+' '+abstract) for x in ('driving','vehicle','automotive','camera','lidar','autonomous','perception','bev','occupancy','gaussian','3d'))
     core_eligible=(core_score>=c['min_classification_score']['core'] and anchor)

@@ -43,7 +43,59 @@ def original_seal_shortfalls(batch, ws, state):
             'qualified': max(0, cfg['min_supplemental_qualified'] - quality['qualified'])}
 
 
-def _check_event(ws, event):
+MUTABLE_SELECTION_REPORT = 'output/batch/selection_decisions.json'
+
+
+def _selection_archive(ws, digest):
+    if len(digest)!=64 or any(c not in '0123456789abcdef' for c in digest):
+        raise ValueError('Invalid selection evidence hash')
+    return Path(ws)/'output/research_cognition/evidence_gain_artifacts'/(digest+'.json')
+
+
+def _archive_selection(ws, raw, digest):
+    if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('Selection archive hash mismatch')
+    p=_selection_archive(ws,digest);p.parent.mkdir(parents=True,exist_ok=True)
+    try:
+        with p.open('xb') as f:f.write(raw)
+    except FileExistsError:
+        if p.read_bytes()!=raw:raise ValueError('Changed immutable selection archive')
+    return p
+
+
+def archive_registered_selection(ws, file):
+    """Recover exact registered report bytes; never change a historical gain event."""
+    root=Path(ws).resolve();file=Path(file).resolve()
+    if not file.is_relative_to(root) or not file.is_file():raise ValueError('Selection snapshot must be inside workspace')
+    raw=file.read_bytes();digest=hashlib.sha256(raw).hexdigest();matches=[]
+    for event in _read(root)['batches']:
+        if any(a['path']==MUTABLE_SELECTION_REPORT and a['sha256']==digest for a in event['artifacts']):
+            matches.append([event['batch_id'],event['gap_id']])
+    if not matches:raise ValueError('Snapshot does not match any already registered mutable selection evidence')
+    p=_archive_selection(root,raw,digest)
+    import store
+    audit={'status':'REGISTERED_SELECTION_BYTES_ARCHIVED','sha256':digest,'source_snapshot':str(file.relative_to(root)),
+           'archive':str(p.relative_to(root)),'matched_events':matches,'at':store.utc(),'historical_events_changed':False}
+    store.write(p.with_suffix('.receipt.json'),audit)
+    return audit
+
+
+def _artifact_bytes(root, row, *, allow_archive=False):
+    p=(root/row['path']).resolve()
+    if not p.is_relative_to(root):raise ValueError('Missing or external evidence artifact')
+    if p.is_file():
+        raw=p.read_bytes()
+        if hashlib.sha256(raw).hexdigest()==row['sha256']:return raw
+    # Only this known mutable report can be superseded. Current scientific
+    # commit receipts and all other evidence still fail closed on tampering.
+    if allow_archive and row['path']==MUTABLE_SELECTION_REPORT:
+        archived=_selection_archive(root,row['sha256'])
+        if archived.is_file():
+            raw=archived.read_bytes()
+            if hashlib.sha256(raw).hexdigest()==row['sha256']:return raw
+    raise ValueError('Changed gap evidence; no scheduling from stale receipts')
+
+
+def _check_event(ws, event, *, allow_archive=False):
     for key in ('batch_id', 'gap_id', 'strategy', 'gain_basis'):
         if not isinstance(event.get(key), str) or not event[key].strip():
             raise ValueError('Missing gap-evidence identity: ' + key)
@@ -56,27 +108,27 @@ def _check_event(ws, event):
     if not isinstance(artifacts, list) or not artifacts:
         raise ValueError('Hash-bound committed evidence is required')
     root = Path(ws).resolve()
-    for row in artifacts:
-        p = (root / row['path']).resolve()
-        if not p.is_relative_to(root) or not p.is_file():
-            raise ValueError('Missing or external evidence artifact')
-        if hashlib.sha256(p.read_bytes()).hexdigest() != row['sha256']:
-            raise ValueError('Changed gap evidence; no scheduling from stale receipts')
+    verified={row['path']:_artifact_bytes(root,row,allow_archive=allow_archive) for row in artifacts}
     commits = [row for row in artifacts if Path(row['path']).name == 'commit.json']
-    if not commits or any(json.loads((root / row['path']).read_text('utf-8')).get('status') != 'COMMITTED' for row in commits):
+    if not commits or any(json.loads(verified[row['path']]).get('status') != 'COMMITTED' for row in commits):
         raise ValueError('A real committed screening receipt is required')
+
 
 
 def record_batch(ws, event):
     """Append idempotently. Contradictory re-submissions are rejected."""
-    _check_event(ws, event)
     data = _read(ws)
     key = (event['batch_id'], event['gap_id'])
     for old in data['batches']:
         if (old['batch_id'], old['gap_id']) == key:
             if old != event:
                 raise ValueError('Conflicting repeated batch evidence; preserve original')
+            _check_event(ws,event,allow_archive=True)
             return status(ws)
+    _check_event(ws,event)
+    for row in event['artifacts']:
+        if row['path']==MUTABLE_SELECTION_REPORT:
+            _archive_selection(ws,(Path(ws)/row['path']).read_bytes(),row['sha256'])
     data['batches'].append(event)
     p = _path(ws)
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -90,7 +142,7 @@ def status(ws):
     data = _read(ws)
     gaps = {}
     for event in data['batches']:
-        _check_event(ws, event)
+        _check_event(ws, event, allow_archive=True)
         row = gaps.setdefault(event['gap_id'], {'consecutive_zero_gain': 0,
                              'batch_ids': [], 'strategies': [], 'requires_review': False})
         row['batch_ids'].append(event['batch_id'])

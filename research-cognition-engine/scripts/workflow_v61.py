@@ -437,6 +437,9 @@ def main(argv:list[str]|None=None)->int:
             cmd.add_argument('--file',required=True,type=pathlib.Path)
         if name in ('rce-collect',):cmd.add_argument('--thread-ref',required=True)
         if name=='reader-collect':cmd.add_argument('--thread-ref')
+        if name=='reader-commit':
+            cmd.add_argument('--lead-file',type=pathlib.Path)
+            cmd.add_argument('--captain-thread-ref')
     args=p.parse_args(argv)
     ws=args.workspace.expanduser().resolve()
     try:
@@ -456,6 +459,10 @@ def main(argv:list[str]|None=None)->int:
             if cmd=='collect':
                 call+=['--role',args.role,'--file',str(args.file)]
                 if args.thread_ref:call+=['--thread-ref',args.thread_ref]
+            if cmd=='commit':
+                if bool(args.lead_file)!=bool(args.captain_thread_ref):
+                    raise ValueError('Captain answer and actual independent thread reference must be supplied together')
+                if args.lead_file:call+=['--lead-file',str(args.lead_file),'--captain-thread-ref',args.captain_thread_ref]
             out=_capture_native(call)
             if cmd=='commit':out={'reader_commit':out,'auto_sync':auto_sync(ws)}
         elif args.command.startswith('rce-'):

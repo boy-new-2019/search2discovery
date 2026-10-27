@@ -3,8 +3,8 @@ import contextlib,copy,io,json,pathlib,sqlite3,sys,tempfile,unittest,urllib.erro
 WS=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(WS/'paper-discovery-preflight/scripts'))
 from literature_sources.common import DEFAULTS,read,write,sha
-from literature_sources.transport import HTTP,SourcePause,allowed,Redirect
-from literature_sources.adapters import Arxiv,CVF,PMLR,OpenReview,Crossref,HTML,record,oa,from_legacy
+from literature_sources.transport import HTTP,SourcePause,allowed,Redirect,public_host
+from literature_sources.adapters import Arxiv,CVF,PMLR,OpenReview,Crossref,HTML,record,oa,from_legacy,query_phrases,title_query_match
 from literature_sources.catalog import Catalog,matches
 from literature_sources.coordinator import Coordinator,configure
 from literature_sources.downloader import inspect_pdf,obtain
@@ -45,6 +45,15 @@ class Base(unittest.TestCase):
     def error(self,code=429,body=b'limited',headers=None):
         return urllib.error.HTTPError('https://openaccess.thecvf.com/test',code,'fixture',headers or {},io.BytesIO(body))
 class TransportTests(Base):
+    def test_dns_failure_is_source_local_typed_pause(self):
+        from unittest.mock import patch
+        import socket
+        with patch('literature_sources.transport.socket.getaddrinfo',side_effect=socket.gaierror(11001,'fixture')):
+            self.assertFalse(public_host('https://arxiv.org/pdf/2501.12345'))
+            h,c,t=self.transport('arxiv');h.check=public_host
+            with self.assertRaises(SourcePause) as err:h.get('https://arxiv.org/pdf/2501.12345')
+            self.assertEqual(err.exception.info['kind'],'PUBLIC_DNS_CHECK_FAILED')
+            self.assertFalse(c)
     def test_each_source_has_separate_cache(self):
         for s,host in [('arxiv','arxiv.org'),('cvf','openaccess.thecvf.com'),('pmlr','proceedings.mlr.press'),('openreview','openreview.net'),('crossref','api.crossref.org')]:
             h,c,t=self.transport(s);u='https://'+host+'/fixture';h.get(u)
@@ -106,6 +115,23 @@ class TransportTests(Base):
         handler=Redirect('cvf',lambda u:True)
         with self.assertRaises(ValueError):handler.redirect_request(urllib.request.Request('https://openaccess.thecvf.com/a'),None,302,'',{},'https://example.org/p.pdf')
 class ParserTests(Base):
+    def test_inspiration_search_omits_generic_tail_phrases(self):
+        query='bounded rationality Herbert Simon decision costs original research'
+        self.assertEqual(query_phrases(query,disciplinary=True),['bounded rationality'])
+        self.assertFalse(title_query_match('Original Research on Particle Physics',query,disciplinary=True))
+        self.assertTrue(title_query_match('Bounded Rationality in Economics',query,disciplinary=True))
+    def test_long_reviewed_query_is_broad_retrieval_not_exact_title_conjunction(self):
+        query='recurrent world model shared latent state prediction planning autonomous driving'
+        self.assertTrue(title_query_match('DriveWorld: World Model for Autonomous Driving',query))
+        self.assertTrue(title_query_match('Latent State Correction from Historical Evidence',query))
+        self.assertFalse(title_query_match('Ocean salinity measurements',query))
+        self.assertIn('world model',query_phrases(query))
+        h=FakeHTTP([('api/query','<feed xmlns="http://www.w3.org/2005/Atom"/>')])
+        Arxiv(h,DEFAULTS).search({**TASK,'query':query},None)
+        import urllib.parse
+        compiled=urllib.parse.parse_qs(urllib.parse.urlsplit(h.urls[0]).query)['search_query'][0]
+        self.assertIn(' OR ',compiled)
+        self.assertIn('all:"world model"',compiled)
     def test_arxiv_version_doi_and_date(self):
         xml="""<feed xmlns="http://www.w3.org/2005/Atom" xmlns:x="http://arxiv.org/schemas/atom"><entry><id>http://arxiv.org/abs/2501.12345v2</id><title>A World Model</title><published>2025-01-12T00:00:00Z</published><author><name>Alice Li</name></author><x:doi>10.1234/abc</x:doi><link title="pdf" href="http://arxiv.org/pdf/2501.12345v2"/></entry></feed>"""
         rows,c=Arxiv(FakeHTTP([('api/query',xml)]),DEFAULTS).search(TASK,None)
@@ -138,6 +164,12 @@ class ParserTests(Base):
         n={'id':'x','cdate':1750000000000,'content':{'title':TITLE,'pdf':'/pdf?id=x','venue':'Rejected from ICLR'}}
         rows,_=OpenReview(FakeHTTP([('notes/search',json.dumps({'notes':[n]}))]),DEFAULTS).search(TASK,None)
         self.assertIn('REJECTED',rows[0]['publication_status'])
+    def test_crossref_retains_genuine_jats_abstract_for_later_screening(self):
+        data={'message':{'items':[{'DOI':'10.1234/abstract','type':'journal-article','title':[TITLE],
+             'published':{'date-parts':[[2025,1,1]]},'abstract':'<jats:p>Historical evidence informs <jats:italic>state correction</jats:italic>.</jats:p>'}]}}
+        rows,_=Crossref(FakeHTTP([('/works?',json.dumps(data))]),DEFAULTS).search(TASK,None)
+        self.assertEqual(rows[0]['abstract'],'Historical evidence informs state correction .')
+        self.assertEqual(rows[0]['source_response']['sha256'],'fixture')
     def test_crossref_exact_doi_and_unlicensed_link(self):
         data={'message':{'DOI':'10.1234/abc','type':'journal-article','title':[TITLE],'published':{'date-parts':[[2025]]},'link':[{'URL':'https://publisher.example/p.pdf','content-type':'application/pdf'}]}}
         h=FakeHTTP([('/works/',json.dumps(data))]);rows,_=Crossref(h,DEFAULTS).search({**TASK,'doi':'10.1234/abc'},None)
@@ -148,6 +180,15 @@ class ParserTests(Base):
         rows,cursor=Crossref(FakeHTTP([('/works?',json.dumps(data))]),DEFAULTS).search(TASK,None)
         self.assertEqual(rows,[])
 class CatalogTests(Base):
+    def test_record_payload_basename_is_bounded_and_identity_bound(self):
+        self.workspace();c=Catalog(self.ws)
+        first=record('cvf','first',TITLE,year=2025)
+        second=record('cvf','second',TITLE+' variant',year=2025)
+        c.add(first);c.add(second)
+        paths=list((c.root/'records').glob('*.json'))
+        self.assertEqual(len(paths),2)
+        self.assertTrue(all(len(p.name)==69 for p in paths))
+        self.assertEqual({read(p)['record_id'] for p in paths},{'cvf:first','cvf:second'})
     def rec(self,source='arxiv',key='one',**kw):
         return record(source,key,TITLE,authors=['Alice Li'],year=2025,publication_date='2025-01-01',**kw)
     def test_doi_preprint_and_conference_count_once(self):
@@ -183,6 +224,176 @@ class CatalogTests(Base):
             self.assertEqual(con.execute("SELECT title,category FROM works WHERE work_id='old'").fetchone(),('Protected evidence','core'))
             self.assertEqual(con.execute('SELECT * FROM claims').fetchall(),[('untouched',)])
 class CoordinatorTests(Base):
+    def test_crossref_missing_registry_doi_does_not_pause_healthy_query_source(self):
+        self.workspace();seen=[]
+        class A:
+            def __init__(self,http,cfg):pass
+            def search(self,task,cursor):
+                seen.append(task.get('doi') or task['query'])
+                if task.get('doi'):raise SourcePause('crossref','NOT_FOUND',status=404,url='https://api.crossref.org/works/10.1234/missing')
+                return [],None
+        c=Coordinator(self.ws,online=True,adapter_classes={name:A for name in DEFAULTS['providers']})
+        c.cfg['routes']={'ai':['crossref'],'cross_disciplinary':['crossref']};c.plan()
+        semantic={k:TASK[k] for k in ('query','category','domain','band','start','end')}
+        missing=c.add_task({**semantic,'doi':'10.1234/missing'},'crossref',-1000)
+        result=c.run(max_steps=2)
+        self.assertEqual(missing['status'],'RESOURCE_NOT_FOUND');self.assertEqual(missing['last_error']['status'],404)
+        self.assertFalse(c.query_coverage_completed(missing));self.assertEqual(len(seen),2)
+        self.assertEqual([x['status'] for x in result['source_events']],['TASK_RESOURCE_NOT_FOUND','PAGE_COMMITTED'])
+        c.run(max_steps=1);self.assertEqual(seen.count('10.1234/missing'),1)
+    def test_existing_crossref_doi_404_checkpoint_is_terminalized_without_retry(self):
+        self.workspace();c=Coordinator(self.ws)
+        semantic={k:TASK[k] for k in ('query','category','domain','band','start','end')}
+        task=c.add_task({**semantic,'doi':'10.1234/missing'},'crossref',-1000)
+        error={'source':'crossref','kind':'NOT_FOUND','status':404,'url':'https://api.crossref.org/works/10.1234/missing'}
+        task.update(status='PAUSED',last_error=error);c.plan()
+        self.assertEqual(task['status'],'RESOURCE_NOT_FOUND');self.assertEqual(task['last_error'],error)
+        self.assertFalse(c.query_coverage_completed(task))
+    def test_bounded_api_query_pass_covers_semantic_without_exhausting_cursor(self):
+        self.workspace()
+        class A:
+            def __init__(self,http,cfg):pass
+            def search(self,task,cursor):return [],'20'
+        c=Coordinator(self.ws,online=True,adapter_classes={name:A for name in DEFAULTS['providers']})
+        c.plan();result=c.run(max_steps=1)
+        passed=next(t for t in c.state['tasks'].values() if t.get('query_pass_receipts'))
+        self.assertEqual(passed['status'],'PENDING');self.assertEqual(passed['cursor'],'20')
+        semantic=(passed['category'],passed['domain'],passed['query'])
+        self.assertIn(semantic,c.completed_semantics())
+        self.assertNotIn(list(semantic),result['summary']['reviewed_queries_pending'])
+        self.assertGreater(result['summary']['reviewed_query_coverage']['non_exhaustive_api_passes'],0)
+        self.assertFalse(result['summary']['reviewed_query_coverage']['exhaustive_corpus_search_claimed'])
+    def test_query_pass_requires_receipt_and_excludes_doi_superseded_and_old_broad(self):
+        self.workspace();c=Coordinator(self.ws)
+        semantic={k:TASK[k] for k in ('query','category','domain','band','start','end')}
+        task=c.add_task(semantic,'crossref',0)
+        task.update(status='PENDING',pages_completed=1,cursor='20',last_step_at='2026-10-26T01:00:00Z')
+        self.assertFalse(c.query_coverage_completed(task))
+        c.record_query_pass(task,None,'20',0,0,0);self.assertTrue(c.query_coverage_completed(task))
+        proof_path=pathlib.Path(task['query_pass_receipts'][0]['path']);proof_path.write_text('{}',encoding='utf-8')
+        self.assertFalse(c.query_coverage_completed(task))
+        c.record_query_pass(task,None,'20',0,0,0)
+        for field,value in [('doi','10.1234/verification'),('superseded_by','new-task')]:
+            task[field]=value;self.assertFalse(c.query_coverage_completed(task));task.pop(field)
+        task.update(category='inspiration',retrieval_profile='ADJACENT_PHRASE_BROAD_V1')
+        c.record_query_pass(task,None,'20',0,0,0);self.assertFalse(c.query_coverage_completed(task))
+    def test_repository_index_scope_still_requires_completion(self):
+        self.workspace();c=Coordinator(self.ws)
+        semantic={k:TASK[k] for k in ('query','category','domain','band','start','end')}
+        for source in ('cvf','pmlr'):
+            task=c.add_task(semantic,source,0)
+            task.update(status='PENDING',pages_completed=1,cursor='next-index',last_step_at='2026-10-26T01:00:00Z')
+            c.record_query_pass(task,None,'next-index',0,0,0)
+            self.assertFalse(c.query_coverage_completed(task))
+            task.update(status='DONE',cursor=None);self.assertTrue(c.query_coverage_completed(task))
+    def test_existing_immutable_committed_run_authenticates_page_on_restart(self):
+        self.workspace();c=Coordinator(self.ws)
+        semantic={k:TASK[k] for k in ('query','category','domain','band','start','end')}
+        task=c.add_task(semantic,'crossref',0);task.update(status='PENDING',pages_completed=1,cursor='20');c.save()
+        write(c.root/'runs/run_fixture.json',{'status':'MULTISOURCE_CHECKPOINT_SAVED',
+              'source_events':[{'status':'PAGE_COMMITTED','source':'crossref','task_id':task['id']}]})
+        restarted=Coordinator(self.ws)
+        self.assertTrue(restarted.query_coverage_completed(restarted.state['tasks'][task['id']]))
+    def test_met_mainline_quotas_prioritize_real_preferred_domain_gap(self):
+        self.workspace();seen=[]
+        class A:
+            def __init__(self,http,cfg):pass
+            def search(self,task,cursor):seen.append(task);return [],None
+        c=Coordinator(self.ws,online=True,adapter_classes={name:A for name in DEFAULTS['providers']})
+        c.dc['quotas'].update(core=1,related=1);c.dc['preferred_domains']={'philosophy':1}
+        c.catalog.add(record('legacy','core','Immutable core source fixture',year=2025),legacy_category='core')
+        c.catalog.add(record('legacy','related','Immutable related source fixture',year=2025),legacy_category='related');c.save()
+        c.run(max_steps=1)
+        self.assertEqual((seen[0]['category'],seen[0]['domain']),('inspiration','philosophy'))
+    def test_scheduler_prioritizes_original_semantics_not_completed_elsewhere(self):
+        self.workspace();seen=[]
+        class A:
+            def __init__(self,http,cfg):pass
+            def search(self,task,cursor):seen.append(task['query']);return [],None
+        c=Coordinator(self.ws,online=True,adapter_classes={name:A for name in DEFAULTS['providers']});c.plan()
+        first=min((t for t in c.state['tasks'].values() if t['source']=='arxiv'),key=lambda t:t['priority'])
+        other=next(t for t in c.state['tasks'].values() if t['source']=='openalex' and t['query']==first['query'])
+        other.update(status='DONE',pages_completed=1,last_step_at='2026-10-26T01:00:00Z')
+        c.record_query_pass(other,None,None,0,0,0);c.save()
+        result=c.run(max_steps=1)
+        self.assertNotEqual(seen[0],first['query'])
+        self.assertTrue(result['summary']['reviewed_queries_pending'])
+    def test_inspiration_requires_original_disciplinary_anchor_not_tail_or_doi(self):
+        self.workspace();c=Coordinator(self.ws)
+        semantic={**{k:TASK[k] for k in ('query','category','domain','band','start','end')},
+                  'category':'inspiration','domain':'nobel_economics',
+                  'query':'bounded rationality Herbert Simon decision costs original research'}
+        task=c.add_task(semantic,'arxiv',0)
+        self.assertEqual(task['retrieval_profile'],'DISCIPLINARY_ANCHOR_V1')
+        good=record('arxiv','good','Bounded Rationality and Economic Decisions',year=2025,publication_date='2025-01-01')
+        bad=record('arxiv','tail','MoEDAL MAPP: Original Research on Particle Physics',year=2025,publication_date='2025-01-01')
+        goodfid,_=c.catalog.add(good,task);badfid,_=c.catalog.add(bad,task)
+        verify=c.add_task({**semantic,'query':'Bounded Rationality Verification Only','doi':'10.1234/verify'},'crossref',-1000)
+        doi=record('crossref','verify','Bounded Rationality Verification Only',year=2025,publication_date='2025-01-01',publication_status='DOI_REGISTERED_JOURNAL-ARTICLE')
+        doifid,_=c.catalog.add(doi,verify);c.classify()
+        self.assertEqual(c.catalog.data['families'][goodfid]['assigned_inspiration_domain'],'nobel_economics')
+        self.assertNotIn('assigned_inspiration_domain',c.catalog.data['families'][badfid])
+        self.assertNotIn('assigned_inspiration_domain',c.catalog.data['families'][doifid])
+    def test_quota_aware_rank_allocation_keeps_core_related_disjoint(self):
+        self.workspace();c=Coordinator(self.ws)
+        c.dc.update(topic_generic_research_mode=True,core_keywords=['world models'],related_keywords=['latent states'])
+        c.dc['quotas'].update(core=1,related=1)
+        for name,year in [('Older',2024),('Newer',2025),('Third',2023)]:
+            row=record('arxiv',name,name+' World Models and Latent States',year=year,publication_date=str(year)+'-06-01')
+            c.catalog.add(row,TASK)
+        c.classify();counts,_=c.catalog.counts()
+        self.assertEqual((counts['core'],counts['related']),(1,1))
+        core=[r for r in c.catalog.active().values() if r.get('screened_candidate_category')=='core'][0]
+        self.assertIn('Newer',c.catalog.data['records'][core['record_ids'][0]]['title'])
+        c.classify();self.assertEqual(c.catalog.counts()[0],counts)
+    def test_generic_keyword_requires_all_reviewed_stems_without_adjacency(self):
+        import paper_discovery as discovery
+        cfg=read(WS/'paper-discovery-preflight/discovery_config.example.json')
+        cfg.update(topic_generic_research_mode=True,core_keywords=['autonomous driving planning','recurrent world models'])
+        positive={'title':'Planning for autonomous driving using recurrent world-models','abstract':'','category_sources':['core'],'inspiration_domains':[]}
+        result=discovery.paper_scores(positive,cfg)
+        self.assertEqual(result['core'],6.6);self.assertTrue(result['core_eligible'])
+        self.assertFalse(discovery.paper_scores({**positive,'title':'Autonomous driving and world images'},cfg)['core_eligible'])
+        self.assertFalse(discovery.metadata_phrase_match('recurrent world models','A world model with no recurrence label'))
+        cfg['topic_generic_research_mode']=False
+        self.assertEqual(discovery.paper_scores(positive,cfg)['core'],0)
+    def test_richer_same_work_manifestation_supplies_metadata_scoring_abstract(self):
+        self.workspace();cfg=read(self.ws/'discovery_config.json')
+        cfg['topic_generic_research_mode']=True
+        cfg['core_keywords']=['shared latent state','latent state correction','historical evidence']
+        write(self.ws/'discovery_config.json',cfg);c=Coordinator(self.ws)
+        title='Unified driving simulator architecture'
+        a=record('crossref','10.1234/same',title,doi='10.1234/same',year=2025,
+                 publication_status='DOI_REGISTERED_JOURNAL-ARTICLE')
+        b=record('arxiv','2501.00001',title,doi='10.1234/same',year=2025,
+                 abstract='Shared latent state uses latent state correction and historical evidence.')
+        fid,_=c.catalog.add(a,TASK);c.catalog.add(b,TASK);c.classify()
+        self.assertEqual(c.catalog.data['families'][fid]['screened_candidate_category'],'core')
+        self.assertEqual(c.catalog.data['records'][a['record_id']]['abstract'],'')
+    def test_retrieval_profile_change_preserves_old_cursor_additively(self):
+        self.workspace();c=Coordinator(self.ws);c.seed()
+        semantic={k:TASK[k] for k in ('query','category','domain','band','start','end')}
+        legacy={**semantic,'source':'arxiv'}
+        from literature_sources.common import stable
+        tid=stable(legacy)[:24]
+        c.state['tasks'][tid]={**legacy,'id':tid,'cursor':'40','status':'PENDING','pages_completed':2,'priority':0}
+        fresh=c.add_task(semantic,'arxiv',0)
+        self.assertNotEqual(fresh['id'],tid)
+        self.assertEqual(c.state['tasks'][tid]['cursor'],'40')
+        self.assertEqual(c.state['tasks'][tid]['superseded_by'],fresh['id'])
+        self.assertIsNone(fresh['cursor'])
+    def test_fresh_reviewed_query_precedes_deeper_pagination(self):
+        self.workspace();seen=[]
+        class A:
+            def __init__(self,http,cfg):pass
+            def search(self,task,cursor):seen.append(task['query']);return [],'20'
+        classes={name:A for name in DEFAULTS['providers']}
+        c=Coordinator(self.ws,online=True,adapter_classes=classes);c.plan()
+        tasks=[t for t in c.state['tasks'].values() if t['source']=='arxiv']
+        first=min(tasks,key=lambda t:(t['priority'],t['id']))
+        first['pages_completed']=1;first['cursor']='20';c.save()
+        c.run(max_steps=1)
+        self.assertNotEqual(seen[0],first['query'])
     def test_configure_is_additive_and_idempotent(self):
         self.workspace();before=(self.ws/'source_routing.json').read_bytes()
         self.assertEqual(configure(self.ws)['status'],'ALREADY_CONFIGURED')
@@ -269,6 +480,15 @@ class PDFTests(Base):
         d=fitz.open();p=d.new_page();p.insert_text((40,50),title,fontsize=10)
         for i in range(25):p.insert_text((40,80+18*i),'Original scholarly text for fixture metadata identity '+str(i),fontsize=8)
         raw=d.tobytes();d.close();return raw
+    def test_pdf_pypdf_fallback_keeps_identity_and_readability_gates(self):
+        from unittest.mock import patch
+        raw=self.pdf();wrong=self.pdf('Different mathematical article')
+        with patch.dict(sys.modules,{'fitz':None}):
+            result=inspect_pdf(raw,TITLE,600)
+            self.assertEqual(result['text_extractor'],'pypdf')
+            self.assertEqual(result['title_check'],'EXACT_NORMALIZED_TITLE')
+            self.assertGreater(result['extractable_chars'],600)
+            with self.assertRaises(ValueError):inspect_pdf(wrong,TITLE,600)
     def test_pdf_identity_and_text(self):
         r=inspect_pdf(self.pdf(),TITLE,600);self.assertEqual(r['title_check'],'EXACT_NORMALIZED_TITLE')
     def test_wrong_pdf_and_html_rejected(self):
@@ -293,6 +513,18 @@ class PDFTests(Base):
         r=obtain(self.ws,online=True,limit=2,http_factory=H)
         self.assertEqual(calls,['openreview','cvf']);self.assertEqual(len(r['ready']),1)
         self.assertEqual(r['attempted_families'],2)
+    def test_oversized_pdf_option_cooldown_survives_next_batch(self):
+        self.workspace();c=Coordinator(self.ws);c.seed()
+        row=record('arxiv','2501.12345',TITLE,year=2025,
+            fulltexts=[oa('arxiv','https://arxiv.org/pdf/2501.12345v1','V1','ARXIV_PUBLIC_FULLTEXT')])
+        fid,_=c.catalog.add(row);c.catalog.data['families'][fid]['screened_candidate_category']='core';c.save();calls=[]
+        class H:
+            def __init__(self,ws,source,policy,online,budget):self.source=source
+            def get(self,url,**kw):calls.append(url);raise SourcePause(self.source,'RESPONSE_SIZE_BOUND')
+        first=obtain(self.ws,online=True,limit=1,http_factory=H)
+        self.assertEqual(first['failed'][0]['kind'],'RESPONSE_SIZE_BOUND')
+        self.assertEqual(obtain(self.ws,online=True,limit=1,http_factory=H)['attempted_families'],0)
+        self.assertEqual(len(calls),1)
     def test_download_provenance_and_no_duplicate_fetch(self):
         self.workspace();c=Coordinator(self.ws);c.seed()
         row=record('cvf','fixture',TITLE,authors=['Alice Li'],year=2025,publication_date='2025-01-01',

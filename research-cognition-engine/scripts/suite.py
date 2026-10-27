@@ -133,6 +133,11 @@ def next_action(ws: pathlib.Path, *, allow_incomplete_discovery: bool = False) -
     # Acquisition is still mandatory for final acceptance. It must not starve
     # an already admitted, source-verified reader campaign of original work.
     if not (ws / "output" / "batch" / "state.json").is_file():
+        if (ws/'source_routing.json').is_file():
+            import multisource_bridge
+            ready=multisource_bridge.pending_reader_inputs(ws)
+            if ready:return {"status":"NEEDS_ORIGINAL_V44_INGEST","new_unindexed_papers":len(ready),
+                "acquisition_gate":acquisition,"next":"Screen authenticated acquired files; final discovery acceptance stays mandatory"}
         if discovery_pending:
             return {"status": "NEEDS_DISCOVERY", "counts": found.get("counts"),
                     "shortfalls": found.get("shortfalls"), "acquisition_gate": acquisition,
@@ -144,6 +149,11 @@ def next_action(ws: pathlib.Path, *, allow_incomplete_discovery: bool = False) -
     except (ValueError, KeyError, RuntimeError, OSError) as exc:
         return {"status": "BLOCKED_ORIGINAL_V44_READER_STATE", "reason": str(exc)[:600],
                 "next": 'Inspect the signed checkpoint, verify the original full-text evidence and reviewer receipts, then continue only the stage justified by a substantive evidence gap and available quota.'}
+    if (ws/'source_routing.json').is_file() and not state.get('frozen'):
+        import multisource_bridge
+        ready=multisource_bridge.pending_reader_inputs(ws,state)
+        if ready:return {"status":"NEEDS_ORIGINAL_V44_INGEST","new_unindexed_papers":len(ready),
+            "acquisition_gate":acquisition,"next":"Screen new authenticated full texts without modifying pending signed tasks"}
     if not original_batch.available(state):
         return {"status": "NEEDS_READABLE_FULLTEXT", "next": 'Source state and independent reviewer provenance must satisfy the specified quality gate.'}
     if not state.get("frozen"):
@@ -156,7 +166,9 @@ def next_action(ws: pathlib.Path, *, allow_incomplete_discovery: bool = False) -
                         "next": "Review target-gap routing before any new screening; retain every pending job and charge"}
             return {"status": "READ_SCREENING", "stage":job["stage"], "job":job["id"],
                     "next": 'Source state and independent reviewer provenance must satisfy the specified quality gate.'}
-        if not state.get("selection"):
+        selection=state.get("selection")
+        stale=selection and 'decisions' in selection and {x['paper_id'] for x in selection['decisions']}!={x['id'] for x in original_batch.available(state)}
+        if not selection or stale:
             return {"status": "READY_FOR_ORIGINAL_V44_SELECT", "next": "Run native_v44_launcher.py select; S1/S2 already done"}
         if len(state["selection"].get("last_selected", [])) < original_batch.cfg_at(ws)["core_min"]:
             return {"status": "INSUFFICIENT_ELIGIBLE_CORE", "core_count":len(state["selection"].get("last_selected", [])),
@@ -222,12 +234,15 @@ def next_action(ws: pathlib.Path, *, allow_incomplete_discovery: bool = False) -
 
 def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else argv
-    if argv and argv[0] in ('gap-record','gap-status'):
+    if argv and argv[0] in ('gap-record','gap-status','gap-archive-selection'):
         import evidence_gain_scheduler as gaps
-        parser=argparse.ArgumentParser();parser.add_argument('command');parser.add_argument('--workspace',required=True,type=pathlib.Path);parser.add_argument('--event-file',type=pathlib.Path)
+        parser=argparse.ArgumentParser();parser.add_argument('command');parser.add_argument('--workspace',required=True,type=pathlib.Path);parser.add_argument('--event-file',type=pathlib.Path);parser.add_argument('--file',type=pathlib.Path)
         args=parser.parse_args(argv)
         if args.command=='gap-record' and not args.event_file:parser.error('--event-file is required')
-        result=gaps.record_batch(args.workspace,store.read(args.event_file)) if args.command=='gap-record' else gaps.status(args.workspace)
+        if args.command=='gap-archive-selection':
+            if not args.file:parser.error('--file is required')
+            result=gaps.archive_registered_selection(args.workspace,args.file)
+        else:result=gaps.record_batch(args.workspace,store.read(args.event_file)) if args.command=='gap-record' else gaps.status(args.workspace)
         print(json.dumps(result,ensure_ascii=False,indent=2));return 0
     if argv and argv[0]=='campaign-plan':
         import campaign

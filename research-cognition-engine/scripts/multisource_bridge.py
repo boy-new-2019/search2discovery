@@ -65,3 +65,17 @@ def venue_records(ws):
             'category_sources':[category(family)],'source_id':'','venue_type':'UNKNOWN_VERIFY_SOURCE',
             'oa_pdf_url':next((o['url'] for rid in family['record_ids'] for o in cat.data['records'][rid].get('fulltexts',[])),'')}
     return result
+
+def pending_reader_inputs(ws,state=None):
+    """Authenticated acquired files can enter screening before bibliography completeness."""
+    if state and state.get('frozen'):return []
+    if any(not (p.parent/'commit.json').exists() for p in (ws/'output/native/tasks').glob('*/manifest.json')):return []
+    known={x.get('sha256') for x in (state or {}).get('papers',[])};result=[]
+    eligible={x['sha256'] for x in downloads(ws) if x['category'] in ('core','related')}
+    # Acquisition ranking can change categories before ingest. Follow authentic
+    # materialized file identity, not the current category-derived destination.
+    for p in sorted((ws/'input').glob('multisource_*/*.pdf')):
+        if p.stem not in eligible or p.stem in known:continue
+        if store.hashbytes(p.read_bytes())!=p.stem:raise ValueError('Reader input integrity mismatch')
+        result.append(p.relative_to(ws/'input').as_posix())
+    return result

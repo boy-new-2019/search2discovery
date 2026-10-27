@@ -89,6 +89,11 @@ def start(ws:pathlib.Path,topic:str)->dict:
     store.write(contract_path(ws),record)
     template={
         'schema_version':SCHEMA,'topic_sha256':record['topic_sha256'],
+        'authoring_constraints':{'problem_dimensions':'3-12 substantive strings, each at least 15 characters',
+            'keywords':'4-25 core and 5-35 related terms',
+            'queries':'4-18 core and 5-18 related queries; each 4-170 characters and at least two English words',
+            'coverage_themes':'2-10 unique acquisition-theme names, each 3-90 characters; min_core integer 0-15. Each admitted paper has ONE primary theme. Sum minima must fit the default 10-paper reading cohort, not the 50-record bibliography quota',
+            'identity':'Use the actual independently spawned cartographer thread identity; never invent an identifier'},
         'goal_sha256':record['goal_sha256'],
         'scope_relation':'NEW_TOPIC' if created else 'COMPATIBLE_WITH_EXISTING_GOAL',
         'topic_interpretation':'Explain the research objects, tasks, hypotheses and scope boundaries established by the actual user topic.',
@@ -108,6 +113,38 @@ def start(ws:pathlib.Path,topic:str)->dict:
             'review_template':str(here(ws)/'topic_brief_template.json'),
             'review_output':str(here(ws)/'topic_brief_reviewed.json'),
             'instruction':'Dispatch a genuine independent Codex Desktop research cartographer. Analyze the exact topic in English, produce research questions, search queries and editorial venue hints (not official certifications), then save topic_brief_reviewed.json and run topic-commit.'}
+
+
+
+def repair_initial_coverage(ws:pathlib.Path,review_path:pathlib.Path)->dict:
+    """Audited semantic clarification before ANY reader indexing, never a gate bypass."""
+    ws=ws.expanduser().resolve();rec=contract(ws)
+    if rec['state']!='TOPIC_CONFIG_COMMITTED':raise ValueError('Commit the independently reviewed topic first')
+    if (ws/'output/batch/state.json').exists() or any((ws/'output/native/tasks').glob('*/manifest.json')):
+        raise ValueError('Coverage correction is forbidden after reader ingestion or signed tasks; preserve the frozen campaign')
+    review=store.read(review_path);path=ws/'selection_config.json';cfg=store.read(path)
+    if review.get('reviewer_role')!='rce_cartographer_sol' or len(str(review.get('reviewer_thread_ref','')))<6:
+        raise ValueError('An actual independent topic cartographer must review the coverage correction')
+    if len(str(review.get('rationale','')).strip())<50:raise ValueError('Explain the acquisition/cohort interpretation error')
+    themes=review.get('coverage_themes')
+    if not isinstance(themes,list) or [x.get('name') for x in themes]!=[x['name'] for x in cfg['coverage_themes']]:
+        raise ValueError('Initial coverage repair may clarify minima only; scientific theme names and scope must remain fixed')
+    if any(type(x.get('min_core')) is not int or not 0<=x['min_core']<=15 for x in themes) or sum(x['min_core'] for x in themes)>cfg['core_target']:
+        raise ValueError('Coverage minima must fit the admitted cohort with one primary theme per paper')
+    audit={'status':'PRE_INGEST_COVERAGE_CLARIFIED','at':store.utc(),'review':review,
+        'before':cfg['coverage_themes'],'after':themes,'topic_sha256':rec['topic_sha256'],
+        'original_reviewed_brief_sha256':rec['reviewed_sha256'],'reader_work_altered':False}
+    audit_path=here(ws)/'coverage_clarifications'/('review_'+store.hashobj(audit)+'.json')
+    original=path.read_bytes();cfg['coverage_themes']=themes
+    try:
+        store.write(path,cfg);BATCH.cfg_at(ws)
+    except Exception:
+        path.write_bytes(original);raise
+    store.write(audit_path,audit)
+    rec.setdefault('coverage_clarifications',[]).append({'path':str(audit_path.relative_to(ws)),
+        'sha256':store.hashbytes(audit_path.read_bytes()),'reviewer_thread_ref':review['reviewer_thread_ref']})
+    store.write(contract_path(ws),rec)
+    return {'status':audit['status'],'audit':str(audit_path),'minima_sum':sum(x['min_core'] for x in themes),'core_target':cfg['core_target']}
 
 
 def _english_phrase(s:Any,kind:str)->str:
@@ -155,9 +192,11 @@ def _check_brief(ws:pathlib.Path,brief:dict,rec:dict)->dict:
         raise ValueError('Input, evidence or workflow invariant failed at topic_to_plan._check_brief (check 155); inspect the signed task record and original source.')
     for t in themes:
         if not isinstance(t,dict) or not isinstance(t.get('name'),str) or not 3<=len(t['name'])<=90 or 'pending review' in t['name'].lower():
-            raise ValueError('Input, evidence or workflow invariant failed at topic_to_plan._check_brief (check 158); inspect the signed task record and original source.')
+            raise ValueError('coverage_themes.name must be 3-90 characters and cannot contain pending review; shorten the label without changing the acquisition criterion.')
         if type(t.get('min_core')) is not int or not 0<=t['min_core']<=15:raise ValueError('Input, evidence or workflow invariant failed at topic_to_plan._check_brief (check 159); inspect the signed task record and original source.')
-    if sum(x['min_core'] for x in themes)>80:raise ValueError('Input, evidence or workflow invariant failed at topic_to_plan._check_brief (check 160); inspect the signed task record and original source.')
+    target=store.read(suite.ROOT/'batch-paper-deepread-desktop/selection_config.example.json')['core_target']
+    if sum(x['min_core'] for x in themes)>target:
+        raise ValueError(f'coverage_themes minima sum exceeds the {target}-paper admitted reading cohort. Each paper has one primary theme; do not use the 50-record bibliography quota.')
     venue=brief.get('venue_hints')
     if not isinstance(venue,dict) or set(venue)!={'conferences','journals'}:raise ValueError('Input, evidence or workflow invariant failed at topic_to_plan._check_brief (check 162); inspect the signed task record and original source.')
     for name in ('conferences','journals'):
@@ -698,14 +737,14 @@ def drive(ws:pathlib.Path,*,max_steps:int=6,online:bool=False,download:bool=Fals
 def main(argv:list[str]|None=None)->int:
     p=argparse.ArgumentParser(description='Inspect the signed checkpoint, verify the original full-text evidence and reviewer receipts, then continue only the stage justified by a substantive evidence gap and available quota.')
     commands=p.add_subparsers(dest='op',required=True)
-    for name in ('start','commit','venues','next','auto','quality','finalize','status','prior-art-plan','prior-art-search','prior-art-download'):
+    for name in ('start','commit','repair-coverage','venues','next','auto','quality','finalize','status','prior-art-plan','prior-art-search','prior-art-download'):
         s=commands.add_parser(name);s.add_argument('--workspace',type=pathlib.Path,required=True)
         if name=='start':s.add_argument('--topic',required=True)
         if name in ('prior-art-search','prior-art-download'):
             s.add_argument('--online',action='store_true')
             if name=='prior-art-search':s.add_argument('--max-requests',type=int,default=2)
             else:s.add_argument('--limit',type=int,default=2)
-        if name=='commit':s.add_argument('--file',type=pathlib.Path,required=True)
+        if name in ('commit','repair-coverage'):s.add_argument('--file',type=pathlib.Path,required=True)
         if name in ('next','auto','quality','finalize'):s.add_argument('--allow-incomplete-discovery',action='store_true')
         if name=='auto':
             s.add_argument('--max-steps',type=int,default=6)
@@ -721,6 +760,7 @@ def main(argv:list[str]|None=None)->int:
             official_venues.check(ws,online=True)
         if x.op=='start':o=start(ws,x.topic)
         elif x.op=='commit':o=commit(ws,x.file)
+        elif x.op=='repair-coverage':o=repair_initial_coverage(ws,x.file)
         elif x.op=='venues':o=venues(ws)
         elif x.op=='next':o=next_action(ws,allow_incomplete_discovery=x.allow_incomplete_discovery)
         elif x.op=='auto':o=drive(ws,max_steps=x.max_steps,online=x.online,download=x.download,

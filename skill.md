@@ -12,3 +12,10 @@
 - New topic contracts require a signed final route/method card or an independently reviewed no-viable conclusion. Never recommend a candidate rejected by prior-art reviewers.
 - Personal Skill bootstrap must work without the original repository path; test from an isolated personal directory with all four siblings.
 - Python 3.12 Windows executable discovery applies PATHEXT rules to fixture paths; use an actual Python executable while retaining real subprocess argument and isolated-directory checks.
+
+## Live campaign compatibility repairs
+
+- Win32 nested answer/receipt paths require extended filesystem paths; preserve logical IDs and declare historical-engine utility changes in the separate hash-bound overlay.
+- Reader-normalized PDF quotations must map back to exact original-page spans before entering the stricter memory store; retain native and literal quotation provenance.
+- Preserve immutable selection-report bytes in evidence-gain events, reselect after new screening, and forward actual independent captain answers through the public entrypoint.
+- Metadata sufficiency, reviewed query-pass coverage, genuine fulltext reading, and independent scientific conclusion are separate gates. A missing DOI is a task-local negative lookup, not whole-source failure or successful query coverage.

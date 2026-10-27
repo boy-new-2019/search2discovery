@@ -1,7 +1,7 @@
 """Verify legacy source with a separately versioned, explicit utility patch overlay."""
 from __future__ import annotations
 import hashlib,json,pathlib
-PATCHED_FILES={'tests/test_deepread.py','SKILL.md','scripts/configure.py','scripts/desktop_bridge.py','scripts/quota_guard.py'}
+PATCHED_FILES={'scripts/deepread.py','tests/test_deepread.py','SKILL.md','scripts/configure.py','scripts/desktop_bridge.py','scripts/quota_guard.py'}
 def verify(root):
     root=pathlib.Path(root)
     p=root/'research-cognition-engine/references/original_v44_file_manifest.json'

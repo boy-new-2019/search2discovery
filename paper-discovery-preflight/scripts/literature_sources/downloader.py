@@ -1,5 +1,5 @@
 """Lawful OA acquisition with title checks and immutable provenance; no reading claims."""
-import csv,datetime as dt,json,pathlib,re
+import csv,datetime as dt,json,pathlib,re,time
 from .common import sha,stable,read,write,utc,title_key,locked
 from .transport import SourcePause,allowed
 from .coordinator import Coordinator
@@ -22,15 +22,24 @@ def title_evidence(first_pages,title,authors=()):
 
 def inspect_pdf(raw,title,minchars,authors=()):
     if not raw.startswith(b'%PDF-'):raise ValueError('Response is not a PDF')
-    import fitz
-    with fitz.open(stream=raw,filetype='pdf') as doc:
-        if doc.needs_pass:raise ValueError('Encrypted PDF is not accepted')
-        pages=len(doc);text='\n'.join(p.get_text() for p in doc)
-        first_pages=[(doc[i].get_text(sort=True),doc[i].get_text()) for i in range(min(2,pages))]
+    try:import fitz
+    except ImportError:
+        import io
+        from pypdf import PdfReader
+        doc=PdfReader(io.BytesIO(raw))
+        if doc.is_encrypted:raise ValueError('Encrypted PDF is not accepted')
+        pages=len(doc.pages);texts=[p.extract_text() or '' for p in doc.pages]
+        text='\n'.join(texts);first_pages=texts[:2];extractor='pypdf'
+    else:
+        with fitz.open(stream=raw,filetype='pdf') as doc:
+            if doc.needs_pass:raise ValueError('Encrypted PDF is not accepted')
+            pages=len(doc);text='\n'.join(p.get_text() for p in doc)
+            first_pages=[(doc[i].get_text(sort=True),doc[i].get_text()) for i in range(min(2,pages))]
+        extractor='pymupdf'
     if len(text.strip())<minchars:raise ValueError('Insufficient extractable original text')
     evidence=title_evidence(first_pages,title,authors)
     if not evidence:raise ValueError('PDF header title identity is not sufficiently supported')
-    return {'pages':pages,'extractable_chars':len(text),'text_sha256':sha(text.encode()),
+    return {'pages':pages,'extractable_chars':len(text),'text_sha256':sha(text.encode()),'text_extractor':extractor,
             **evidence,'title_token_coverage':1.0}
 _LOCAL_TITLE_INDEX={}
 
@@ -85,6 +94,13 @@ def obtain(ws,*,online,category='core',limit=3,request_limit=12,http_factory=Non
             from urllib.parse import urlsplit,quote
             options=[(r,{**o,'original_attachment_url':o['url'],'url':'https://openreview.net/pdf?id='+quote(r['source_record_id'],safe='')})
                      if o['source']=='openreview' and urlsplit(o['url']).path.startswith('/pdf/') and r.get('source_record_id') else (r,o) for r,o in options]
+            # A bounded oversized response must not be fetched again every batch.
+            # Bind cooldown to source identity, URL and current byte ceiling; a new
+            # version/URL or explicit larger legal bound remains independently eligible.
+            failures_by_option=co.catalog.data.setdefault('download_option_failures',{})
+            def option_key(rec,option):
+                return stable({'record_id':rec['record_id'],'url':option['url'],'max_bytes':cfg['max_pdf_bytes']})
+            options=[(r,o) for r,o in options if failures_by_option.get(option_key(r,o),{}).get('resume_after',0)<=time.time()]
             if not options:continue
             title=recs[0]['title'];saved=None
             for path,info in local_candidates(co.ws,title,recs[0].get('authors',[])):
@@ -118,6 +134,10 @@ def obtain(ws,*,online,category='core',limit=3,request_limit=12,http_factory=Non
                            'reused_local':False,'source_response':proof,**checks};break
                 except SourcePause as exc:
                     failures.append({'family_id':fid,**exc.info})
+                    if exc.info['kind']=='RESPONSE_SIZE_BOUND':
+                        failures_by_option[option_key(rec,option)]={'family_id':fid,'record_id':rec['record_id'],
+                            'url':option['url'],'kind':'RESPONSE_SIZE_BOUND','max_bytes':cfg['max_pdf_bytes'],
+                            'observed_at':utc(),'resume_after':time.time()+86400}
                     if exc.info['kind'] not in ('NOT_FOUND','RESPONSE_SIZE_BOUND'):blocked.add(source)
                 except (ValueError,RuntimeError) as exc:
                     if 'integrity' in str(exc).lower():raise

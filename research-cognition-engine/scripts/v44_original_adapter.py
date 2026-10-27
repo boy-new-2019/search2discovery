@@ -12,6 +12,7 @@ import hashlib
 import pathlib
 import sqlite3
 import sys
+import unicodedata
 from typing import Any
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -26,6 +27,31 @@ import store
 
 class EvidenceBridgeError(ValueError):
     pass
+
+
+def _literal_source_quote(page_text: str, quote: str) -> str:
+    """Map an already validated reader quote back to an exact source substring.
+
+    Reader normalization removes PDF whitespace, soft hyphens and compatibility
+    glyphs. Memory retains its stricter literal matcher and unchanged sources.
+    """
+    if store.norm(quote) in store.norm(page_text):
+        return quote
+    chars, offsets = [], []
+    for index, char in enumerate(page_text):
+        for normalized in unicodedata.normalize("NFKC", char).replace("\u00ad", ""):
+            if not normalized.isspace():
+                chars.append(normalized)
+                offsets.append(index)
+    flat = "".join(chars)
+    target = original.norm(quote)
+    start = flat.find(target)
+    if flat != original.norm(page_text) or not target or start < 0:
+        raise EvidenceBridgeError("Reader quotation cannot map to a literal source span")
+    literal = page_text[offsets[start]:offsets[start + len(target) - 1] + 1]
+    if not 10 <= len(store.norm(literal)) <= 280:
+        raise EvidenceBridgeError("Literal source span exceeds memory quotation bounds")
+    return literal
 
 
 def _raw_file(ws: pathlib.Path, relative: str) -> pathlib.Path:
@@ -239,10 +265,12 @@ def sync(ws: pathlib.Path, *, limit_papers: int | None = None) -> dict:
                         if len(store.norm(quote)) < 10:
                             skipped_short += 1
                             continue
+                        native_quote = quote
+                        quote = _literal_source_quote(pages[cite["page"] - 1], native_quote)
                         store.checked_quote(ws, source_id, cite["page"], quote)
                         claim_id = "CLM-" + store.hashobj({"original_sha256": digest,
                                    "text": obs["claim"], "page": cite["page"],
-                                   "quote": quote, "kind": claim_kind})[:18]
+                                   "quote": native_quote, "kind": claim_kind})[:18]
                         with store.connect(ws) as con:
                             exists = bool(con.execute("SELECT 1 FROM claims WHERE claim_id=?", (claim_id,)).fetchone())
                             if not exists:
@@ -253,7 +281,10 @@ def sync(ws: pathlib.Path, *, limit_papers: int | None = None) -> dict:
                                              "ANCHOR_CHECKED_SEMANTICS_NOT_AUDITED", store.utc()))
                                 store.event(con, "ORIGINAL_V44_READING_EVIDENCE_IMPORTED",
                                             {"claim_id": claim_id, "source_id": source_id, "job": jid,
-                                             "research_inference_only": status == "inferred"})
+                                             "research_inference_only": status == "inferred",
+                                             "native_quote": native_quote,
+                                             "source_literal_quote": quote,
+                                             "quote_mapping": "LITERAL_SOURCE_SPAN" if quote != native_quote else "UNCHANGED"})
                                 imported += 1
         result.append({"core_paper_id": corepid, "source_paper_id": paper["id"],
                        "work_id": workid, "source_id": source_id,

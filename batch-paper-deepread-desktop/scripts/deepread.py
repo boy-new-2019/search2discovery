@@ -44,11 +44,23 @@ def dump(obj: Any) -> str:
     return json.dumps(obj, ensure_ascii=False, sort_keys=True, indent=2)
 
 
+def filesystem_path(path: Path) -> Path:
+    """Use Win32 extended paths only at I/O boundaries; retain logical task IDs."""
+    value = os.fspath(path)
+    if os.name != "nt" or value.startswith("\\\\?\\"):
+        return Path(value)
+    value = os.path.abspath(value)
+    if value.startswith("\\\\"):
+        return Path("\\\\?\\UNC\\" + value[2:])
+    return Path("\\\\?\\" + value)
+
+
 def jread(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8"))
+    return json.loads(filesystem_path(path).read_text(encoding="utf-8"))
 
 
 def atomic_text(path: Path, content: str) -> None:
+    path = filesystem_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, prefix=".tmp_", delete=False) as f:
         tmp = Path(f.name)
@@ -70,7 +82,7 @@ def htext(s: str) -> str:
 
 def file_hash(path: Path) -> str:
     h = hashlib.sha256()
-    with path.open("rb") as f:
+    with filesystem_path(path).open("rb") as f:
         for block in iter(lambda: f.read(1 << 20), b""):
             h.update(block)
     return h.hexdigest()
@@ -293,11 +305,11 @@ def paper_row(ctx: dict, pid: str) -> dict:
 
 
 def ans_path(ctx: dict, jid: str) -> Path:
-    return ctx["run"] / "answers" / f"{jid}.json"
+    return filesystem_path(ctx["run"] / "answers" / f"{jid}.json")
 
 
 def rec_path(ctx: dict, jid: str) -> Path:
-    return ctx["run"] / "route_receipts" / f"{jid}.json"
+    return filesystem_path(ctx["run"] / "route_receipts" / f"{jid}.json")
 
 
 def answer(ctx: dict, jid: str) -> dict:

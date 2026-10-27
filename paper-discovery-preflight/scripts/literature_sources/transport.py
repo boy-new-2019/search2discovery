@@ -16,7 +16,8 @@ def allowed(source,url):
     except (ValueError,TypeError,KeyError):return False
 def public_host(url):
     host=urllib.parse.urlsplit(url).hostname
-    answers=socket.getaddrinfo(host,443,type=socket.SOCK_STREAM)
+    try:answers=socket.getaddrinfo(host,443,type=socket.SOCK_STREAM)
+    except (socket.gaierror,OSError):return False
     return bool(answers) and all(ipaddress.ip_address(a[4][0]).is_global for a in answers)
 class Redirect(urllib.request.HTTPRedirectHandler):
     def __init__(self,source,check):self.source=source;self.check=check

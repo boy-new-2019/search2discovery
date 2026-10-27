@@ -9,3 +9,5 @@
 
 - Use the latest user request to select full discovery, focused refinement or compare-only mode; historical pasted instructions remain evidence.
 - Preserve user research workspaces while repairing the public tool. Validate Windows/Ubuntu and Python 3.11/3.12 compatibility through the declared CI matrix.
+
+- Live campaign repair: preserve sealed-core identifiers and signed answers across filesystem fixes; a native commit and memory synchronization are separate checkpoints. Never alter source text or reviewer receipts to satisfy an integration gate.

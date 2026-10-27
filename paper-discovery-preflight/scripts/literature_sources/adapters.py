@@ -63,12 +63,30 @@ class HTML(HTMLParser):
             publication_status='PUBLISHED_WORKSHOP' if workshop else 'PUBLISHED_PROCEEDINGS',
             version=version,landing_url=url,abstract=norm(self.ids.get('abstract','')),
             fulltexts=[oa(source,urljoin(url,pdf),version,'OFFICIAL_OPEN_ACCESS_REPOSITORY')] if pdf else [])
+def disciplinary_anchor(query):
+    stop={'a','an','and','or','the','of','for','to','in','on','with','under','from','by'}
+    return ' '.join(t for t in re.findall(r'[\w-]+',query.casefold()) if t not in stop).split()[:2]
+
+def query_phrases(query,*,disciplinary=False):
+    """Bounded lexical broad retrieval; reviewed query text remains the task identity."""
+    if disciplinary:return [' '.join(disciplinary_anchor(query))]
+    tokens=re.findall(r'[\w-]+',query.casefold())
+    stop={'a','an','and','or','the','of','for','to','in','on','with','under','from','by'}
+    pairs=[' '.join((a,b)) for a,b in zip(tokens,tokens[1:]) if a not in stop and b not in stop]
+    return list(dict.fromkeys(pairs or [t for t in tokens if t not in stop]))[:24]
+
+def title_query_match(title,query,*,disciplinary=False):
+    # Long reviewed queries describe several facets, not a verbatim paper title.
+    # Retrieval admits candidates only; downstream scoring and S1/S2 decide relevance.
+    text=norm(title).casefold()
+    return any(re.search(r'(?<!\w)'+re.escape(phrase)+r'(?!\w)',text) for phrase in query_phrases(query,disciplinary=disciplinary))
+
 class Arxiv:
     name='arxiv'
     def __init__(self,http,cfg):self.http=http;self.cfg=cfg
     def search(self,task,cursor):
         start=int(cursor or 0);size=self.cfg['page_size'];q=task['query']
-        quoted=' AND '.join('all:"'+token.replace('"','')+'"' for token in re.findall(r'[\w-]+',q))
+        quoted=' OR '.join('all:"'+phrase+'"' for phrase in query_phrases(q,disciplinary=task.get('category')=='inspiration'))
         date=f"submittedDate:[{task['start'].replace('-','')}0000 TO {task['end'].replace('-','')}2359]"
         url='https://export.arxiv.org/api/query?'+urllib.parse.urlencode({'search_query':f'({quoted}) AND {date}','start':start,'max_results':size,'sortBy':'submittedDate','sortOrder':'descending'})
         raw,proof=self.http.get(url);root=ET.fromstring(raw)
@@ -109,8 +127,8 @@ class CVF:
                 state={**state,'unit':state['unit']+1,'paper':0}
                 return [],json.dumps(state) if state['unit']<len(units) else None
             raise
-        doc=HTML(raw.decode('utf-8','replace'),url);tokens=[x.casefold() for x in re.findall(r'\w+',task['query']) if len(x)>2]
-        matches=[x for x in doc.links if '_paper.html' in x['url'] and all(t in norm(x['label']).casefold() for t in tokens)]
+        doc=HTML(raw.decode('utf-8','replace'),url)
+        matches=[x for x in doc.links if '_paper.html' in x['url'] and title_query_match(x['label'],task['query'],disciplinary=task.get('category')=='inspiration')]
         # An offset is committed only after each bounded detail page succeeds.
         if state['paper']<len(matches):
             item=matches[state['paper']];body,detail=self.http.get(item['url'])
@@ -139,8 +157,7 @@ class PMLR(CVF):
         units=state['units']
         if state['unit']>=len(units):return [],None
         url=units[state['unit']];raw,proof=self.http.get(url);doc=HTML(raw.decode('utf-8','replace'),url)
-        tokens=[x.casefold() for x in re.findall(r'\w+',task['query']) if len(x)>2]
-        matches=[p for p in doc.papers if all(t in norm(p['title']).casefold() for t in tokens)]
+        matches=[p for p in doc.papers if title_query_match(p['title'],task['query'],disciplinary=task.get('category')=='inspiration')]
         if state['paper']<len(matches):
             item=matches[state['paper']]
             link=next((x['url'] for x in item['links'] if urllib.parse.urlsplit(x['url']).path.endswith('.html')),'')
@@ -211,6 +228,7 @@ class Crossref:
                 date_precision='DAY' if len(date)==3 else 'YEAR',venue=(item.get('container-title') or [''])[0],
                 publication_status='DOI_REGISTERED_'+item.get('type','UNKNOWN').upper(),
                 version=item.get('type','DOI_METADATA'),landing_url=item.get('URL') or 'https://doi.org/'+doi,
+                abstract=norm(re.sub(r'<[^>]+>',' ',item.get('abstract') or '')),
                 fulltexts=links,citation_count=item.get('is-referenced-by-count'),source_response=proof,
                 doi_verification='EXACT_REGISTRY_RESPONSE' if explicit else 'REGISTRY_SEARCH_METADATA',
                 declared_relations=item.get('relation',{})))

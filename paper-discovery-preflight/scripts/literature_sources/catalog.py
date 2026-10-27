@@ -74,7 +74,9 @@ class Catalog:
             self.data['relations'].append({'left':oldrid,'right':rid,'kind':kind,'basis':match_reason,
                                           'acceptance_or_scientific_equivalence_not_inferred':True})
         rec['record_id']=rid;self.data['records'][rid]=rec;self.data['record_family'][rid]=family;item['record_ids'].append(rid)
-        payload=self.root/'records'/(stable(rid)+'.'+digest+'.json')
+        # One content-addressed filename keeps deep Windows workspaces below MAX_PATH.
+        # The hash binds both the source identity and immutable metadata signature.
+        payload=self.root/'records'/(stable({'record_id':rid,'metadata_sha256':digest})+'.json')
         if not payload.exists():write(payload,rec)
         if task:self.data['query_links'].setdefault(task['id'],[]).append(rid)
         return family,True

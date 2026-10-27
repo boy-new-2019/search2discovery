@@ -27,6 +27,11 @@
       "before_sha256": "8e1effa09ab45d54cb3f60a62141c72198b987a7585a4eff72fe1721b21c6d86",
       "reason": "Run the subprocess fixture through Python on Windows and POSIX instead of relying on executable shebangs.",
       "after_sha256": "4a2b8b9290fdb81336e248245975c18616a0e1e2548222d46438c4cacde435a5"
+    },
+    "scripts/deepread.py": {
+      "before_sha256": "d611c43fea10baba3b880ceff28461d2ee6e72bcaabe1c573f49cb692e2669d9",
+      "after_sha256": "de2a1c74b721113f3399031771a5c30cd892468e076feb4d73f57099d562fc13",
+      "reason": "Use extended Win32 paths at filesystem boundaries for nested frozen-core answer and receipt files; retain task identifiers and evidence validation."
     }
   }
 }

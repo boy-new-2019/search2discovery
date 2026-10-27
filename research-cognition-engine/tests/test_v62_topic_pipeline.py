@@ -159,7 +159,18 @@ class TopicPipelineV62Tests(unittest.TestCase):
         manifest=store.read(ROOT/'research-cognition-engine'/'references'/'original_v44_file_manifest.json')
         expected=manifest['skill_files_sha256']['scripts/deepread.py']
         self.assertIn('scripts/deepread.py',manifest['original_v44_skill_files_sha256'])
+        # Preserve the immutable adaptation baseline; utility patches require an
+        # independently hash-bound declaration and the production verifier.
+        from release_integrity import verify
+        patch=store.read(ROOT/'research-cognition-engine/references/runtime_patch_manifest.json')
+        utility=patch['files'].get('scripts/deepread.py')
+        if utility:
+            self.assertEqual(utility['before_sha256'],expected)
+            expected=utility['after_sha256']
         self.assertEqual(store.hashbytes(original.read_bytes()),expected)
+        result=verify(ROOT)
+        self.assertEqual(result['missing'],[])
+        self.assertEqual(result['modified'],[])
 
 if __name__=='__main__':unittest.main()
 

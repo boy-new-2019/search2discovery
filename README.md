@@ -25,6 +25,7 @@
 - 满足准入条件的核心文献优先进入精读；未回答的科学问题进入后续推理。对同一缺口连续两批没有有效证据增益时，暂停该检索策略并复查。
 - `campaign-plan` 在扩展筛选前核算各阶段需求。预算是本地派发上限，不能当作账户余额；新建研究推理配置可容纳完整九次专家派发，旧配置不自动增加。
 - Python 3.11 字符串语法已修正；CI 同时测试 Windows / Ubuntu 与 Python 3.11 / 3.12。
+- 实际运行修复：新全文及时进入筛选，新筛选完成后重算核心名单；独立主审结果可通过统一入口提交；缺口记录保存不可变报告快照；Windows 长路径及 PDF 引用到研究记忆的同步兼容已处理。已验证的有界检索与穷尽分页分别记录，缺失 DOI 不再阻断整个来源。软件回归通过与完整科研流程通过分别报告。
 
 ### 全局安装后的首次使用
 
@@ -188,6 +189,7 @@ Topic-driven campaigns should converge on **one primary research route and a con
 - Ready admitted core reading takes priority over optional breadth. Two zero-gain batches against the same evidence gap trigger strategy review.
 - `campaign-plan` exposes phase feasibility before further screening. Local caps do not report account quota. Fresh cognition defaults admit all nine required specialist assignments; existing caps are preserved.
 - CI compiles and runs regression suites on Windows and Ubuntu with Python 3.11 and 3.12.
+- Live-run repairs cover fresh fulltext scheduling, reselection after new screening, independent captain submission, immutable gap-report snapshots, Windows long paths and literal source-quote synchronization. Verified bounded query passes remain distinct from exhaustive pagination; missing DOI lookups do not stop healthy providers. Software regression and complete scientific workflow acceptance are reported separately.
 
 ### Bootstrap from a personal installation
 
