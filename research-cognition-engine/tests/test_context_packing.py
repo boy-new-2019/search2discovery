@@ -16,6 +16,12 @@ def claim(number,source="A",kind="METHOD",length=180):
 
 
 class PackingTests(unittest.TestCase):
+    def test_index_lookup_allowed_without_scientific_execution(self):
+        prompt=engine._instructions("MECHANISM","rce_method_sol")
+        self.assertIn("filtered index lookup",prompt)
+        self.assertIn("Do not execute scientific models",prompt)
+        self.assertNotIn("Do not run code,",prompt)
+
     def test_balances_sources_and_kinds_preserving_records(self):
         rows=[claim(i) for i in range(20)]+[claim(20,"A","LIMITATION"),claim(21,"B")]
         original=copy.deepcopy(rows)

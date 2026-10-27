@@ -133,7 +133,8 @@ def _instructions(kind:str,role:str)->str:
         "Never alter the user's frozen research problem, core algorithm, models, losses, math, "
         "training/inference protocols or original results. Write ONLY the specified JSON schema "
         "in concise English and preserve verbatim source quotations. "
-        "Do not run code, simulations, tests, training or experiments, or invent numerical gains. "
+        "Do not execute scientific models, simulations, training, inference or experiments, or invent numerical gains. "
+        "Deterministic file reading, filtered index lookup, hash/quote checks and PDF rendering are permitted. "
         "Only the final researcher-facing presentation is in Chinese. "
         "Use available_fulltext_index to locate omitted source paths and anchored claims when needed; verify its SHA256 and original pages. Evidence sampling is not an exhaustive literature review."
     )
