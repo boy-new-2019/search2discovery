@@ -45,3 +45,9 @@ Reviewed the actual `Research_Cognition_Engine_v6.6_English_Internal_R3_PaperOnl
 8. **No end-to-end live science benchmark — NOT RUN:** The 238 tests are offline software tests. Real literature search quality, policy enforcement, and long-context cost require future controlled field evaluation.
 
 **Publication record:** The maintainer requested a public GitHub repository under MIT; `https://github.com/boy-new-2019/search2discovery` was created and pushed on 2026-10-26. This record does not replace maintainer verification of third-party or historical-source rights.
+
+## Live-run software checkpoint (2026-10-27)
+
+Reusable repair commit `96014a2` passed **402** local Python 3.11 regression tests: reader 68, discovery 39, cognition 144, original integration 8, public packaging/source/compatibility 143. [GitHub Actions run 40530324651](https://github.com/boy-new-2019/search2discovery/actions/runs/40530324651) passed all Windows/Ubuntu and Python 3.11/3.12 jobs.
+
+The private authorized field run exercised genuine multi-source requests, lawful fulltext retrieval, independent screening/captain commits, frozen-core admission and authentic first-round reading. It exposed and verified fixes for scheduling, mutable report provenance, Win32 path length and normalized-reader/literal-memory integration. These observations supersede the initial statement that no native smoke had run. They do **not** establish a completed end-to-end research campaign, a novel method, downstream scientific performance or exhaustive novelty coverage. No scientific experiment was executed. Private research content and receipts are excluded from this repository.
