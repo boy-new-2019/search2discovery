@@ -281,6 +281,12 @@ def choose(ws:pathlib.Path,*,allow_incomplete_discovery:bool=False)->dict:
     # Preserve integrity/sync checks above. Ready original-source reading has
     # priority over optional new leads; acquisition is not certified complete.
     reader_priority = step is not None and step['status'] in ('READY_TO_SEAL_ORIGINAL_V44', 'READ_ORIGINAL_V44_CORE')
+    # Once a signed cognition cycle is underway, optional heuristic question
+    # searches must not starve its remaining specialists or final review.
+    # The topic scheduler still enforces hypothesis-specific prior-art search,
+    # and unread newly acquired question papers still take precedence below.
+    cognition_priority = step is not None and step['status'] in (
+        'READY_FOR_RCE_NATIVE_TASK', 'SCIENTIFIC_RECOMMENDATION_PENDING_USER_APPROVAL')
     research = None
     if not reader_priority:
         pending=_new_question_papers_after_freeze(ws)
@@ -288,7 +294,8 @@ def choose(ws:pathlib.Path,*,allow_incomplete_discovery:bool=False)->dict:
             return {'status':'NEEDS_SEPARATE_READING_CAMPAIGN','papers':pending[:10],
                     'total_new_fulltext_papers':len(pending),
                     'next':'Source state and independent reviewer provenance must satisfy the specified quality gate.'}
-        research=_question_next(ws)
+        if not cognition_priority:
+            research=_question_next(ws)
         if research and research['status'] in ('NEEDS_QUESTION_DRIVEN_SEARCH','NEEDS_QUESTION_QUERY_REVIEW'):
             import evidence_gain_scheduler as gain_scheduler
             pause=gain_scheduler.automatic_search_pause(ws)

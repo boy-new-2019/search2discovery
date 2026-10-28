@@ -7,6 +7,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 for p in (ROOT,ROOT/'research-cognition-engine'/'scripts',ROOT/'paper-discovery-preflight'/'scripts',
@@ -132,6 +133,28 @@ class V61OriginalStack(unittest.TestCase):
         self.assertIn(wf.choose(self.ws)['status'],('NEEDS_QUESTION_DRIVEN_SEARCH','NEEDS_DISCOVERY'))
         self.assertEqual(wf.auto_sync(self.ws)['status'],'NO_COMMITTED_CORE_EVIDENCE')
         self.assertEqual(wf.run(self.ws,max_steps=2)['status'],'PAUSED_FOR_PERMISSION_OR_EXTERNAL_WORK')
+
+    def test_active_and_completed_cognition_defer_optional_question_search(self):
+        self._q()
+        cycle={'cycles':[{'id':'RC0001','stage':'MECHANISM'}]}
+        with mock.patch('evidence_gain_scheduler.ready_reader_checkpoint',return_value=True), \
+             mock.patch.object(wf.suite,'next_action',return_value={'status':'READY_FOR_RCE_NATIVE_TASK'}), \
+             mock.patch.object(wf.suite.engine,'get_state',return_value=cycle), \
+             mock.patch.object(wf,'_new_question_papers_after_freeze',return_value=[]), \
+             mock.patch.object(wf,'_question_next',wraps=wf._question_next) as question_next:
+            self.assertEqual(wf.choose(self.ws)['status'],'PREPARE_RCE_NATIVE_TASK')
+            folder=wf.suite.engine.taskdir(self.ws,'RC0001_MECHANISM')
+            folder.mkdir(parents=True,exist_ok=True)
+            (folder/'manifest.json').write_text('{}','utf8')
+            self.assertEqual(wf.choose(self.ws)['status'],'WAIT_FOR_NATIVE_RCE_SUBAGENTS')
+            wf.suite.next_action.return_value={'status':'SCIENTIFIC_RECOMMENDATION_PENDING_USER_APPROVAL'}
+            self.assertEqual(wf.choose(self.ws)['status'],'SCIENTIFIC_RECOMMENDATION_PENDING_USER_APPROVAL')
+            question_next.assert_not_called()
+            with mock.patch.object(wf,'_new_question_papers_after_freeze',return_value=[{'work_id':'unread'}]):
+                self.assertEqual(wf.choose(self.ws)['status'],'NEEDS_SEPARATE_READING_CAMPAIGN')
+        # Deferred questions are preserved and remain explicitly searchable.
+        self.assertEqual(wf.choose(self.ws)['status'],'NEEDS_QUESTION_DRIVEN_SEARCH')
+        self.assertGreater(qsearch.plan(self.ws)['new_queries'],0)
 
     def test_question_find_then_v5_catalogue_later_reconciles_without_overwriting(self):
         self._q()

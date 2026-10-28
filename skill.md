@@ -26,3 +26,5 @@
 
 - Unicode source-span alignment must account for whole-string composition and canonical reordering. Decomposition offsets plus local original-reader equivalence recover exact source spans without relaxing quotation checks.
 - Original reader synthesis can outgrow its fixed prompt limit after independent evidence fusion. Keep whole balanced records, one primary evidence record per source row, untouched mandatory instructions and vetoes, and a complete immutable hash-bound index; never raise caps or count indexed previews as scientific review.
+
+- Prioritize an already started cognition cycle over optional heuristic question searches, while retaining unread-source gates and mandatory hypothesis-specific prior-art search. Keep deferred questions available for an explicit later search.
