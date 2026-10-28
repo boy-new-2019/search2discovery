@@ -51,10 +51,21 @@ class NullConclusion(unittest.TestCase):
   self.assertEqual(result['next_stage'],'FINAL')
   payload={'status':'NO_VIABLE_CANDIDATE','selected_hypothesis_id':None,'candidate_comparison':[],
    'rationale':'The full source comparison supports no distinct candidate; identify discriminating evidence before a new campaign.',
-   'novelty_risk':'No positive novelty claim is made and no method or empirical improvement is manufactured.'}
+   'novelty_risk':'No positive novelty claim is made and no method or empirical improvement is manufactured.',
+   'method_card':{'problem':'Diagnostic question only: retain or discard the matched correction.',
+                  'falsifier':'Stop if a simpler matched comparator succeeds.',
+                  'nearest_work_comparison':[{'work_id':'W-occupancy','shared_mechanism':'Shared baseline'}]}}
   f.submit(f.task(),lambda stage,role:{'stage':'FINAL','recommendations':[],
    'no_recommendation_reason':'Independent final review found no grounded new mechanism in the existing source evidence.', 'route_selection':payload})
   self.assertEqual(route.render(f.ws)['status'],'NO_VIABLE_CANDIDATE')
+  text=(store.root(f.ws)/'research_discovery_package/final_route_and_method.md').read_text(encoding='utf8')
+  self.assertIn('Reason for no recommendation',text)
+  self.assertIn('Independent final review found no grounded new mechanism',text)
+  self.assertIn('Unvalidated diagnostic material',text)
+  self.assertIn('retain or discard the matched correction',text)
+  self.assertIn('Stop if a simpler matched comparator succeeds',text)
+  self.assertIn('W-occupancy',text)
+  self.assertNotIn('RECOMMENDED_FOR_VALIDATION',text)
 class BootstrapAndIntegrity(unittest.TestCase):
  def test_bootstrap_from_personal_skill_without_repository(self):
   with tempfile.TemporaryDirectory() as folder:

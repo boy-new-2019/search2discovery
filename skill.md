@@ -28,3 +28,5 @@
 - Original reader synthesis can outgrow its fixed prompt limit after independent evidence fusion. Keep whole balanced records, one primary evidence record per source row, untouched mandatory instructions and vetoes, and a complete immutable hash-bound index; never raise caps or count indexed previews as scientific review.
 
 - Prioritize an already started cognition cycle over optional heuristic question searches, while retaining unread-source gates and mandatory hypothesis-specific prior-art search. Keep deferred questions available for an explicit later search.
+
+- A no-viable-candidate conclusion may still include a useful diagnostic plan. Render its rationale and any supplied diagnostic fields with an explicit unvalidated/no-selection label; do not promote it to a recommended method or infer novelty.

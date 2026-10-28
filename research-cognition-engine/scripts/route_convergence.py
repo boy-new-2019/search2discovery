@@ -77,6 +77,27 @@ def render(ws):
     if result['selected']:
         for key in METHOD_FIELDS:lines.extend(['','## '+key.replace('_',' '),'',route['method_card'][key]])
         lines.extend(['','## Nearest prior mechanisms','',json.dumps(route['method_card']['nearest_work_comparison'],ensure_ascii=False,indent=2)])
+    else:
+        # A null decision may still contain a useful diagnostic plan; it is not
+        # validated as a recommended method and must remain visibly distinct.
+        import engine
+        cycle=engine.get_state(ws)['cycles'][-1]
+        answer=store.read(engine.taskdir(ws,cycle['id']+'_FINAL')/'answers/rce_general_manager_astra.json')
+        reason=answer.get('no_recommendation_reason')
+        if isinstance(reason,str) and reason.strip():lines.extend(['','## Reason for no recommendation','',reason])
+        families=answer.get('examined_unregistered_families')
+        if isinstance(families,list) and families:
+            lines.extend(['','## Examined unregistered families','',json.dumps(families,ensure_ascii=False,indent=2)])
+        card=route.get('method_card')
+        if isinstance(card,dict) and card:
+            lines.extend(['','## Diagnostic plan only','',
+                'Unvalidated diagnostic material; no method candidate was selected and no novelty or feasibility is established.'])
+            for key in METHOD_FIELDS:
+                value=card.get(key)
+                if isinstance(value,str) and value.strip():lines.extend(['','### '+key.replace('_',' '),'',value])
+            nearest=card.get('nearest_work_comparison')
+            if isinstance(nearest,list) and nearest:
+                lines.extend(['','### Nearest prior mechanisms (diagnostic)','',json.dumps(nearest,ensure_ascii=False,indent=2)])
     lines.extend(['','DESIGN ONLY. No experiment executed. Novelty remains subject to source and empirical review.'])
     store.textwrite(out/'final_route_and_method.md','\n'.join(lines)+'\n')
     return result
